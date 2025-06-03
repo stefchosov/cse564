@@ -11,7 +11,7 @@ jobs:
     environment: test  # This links to your GitHub 'test' environment
 
     env:
-      DEPLOY_DIR: /
+      DEPLOY_DIR: /app
 
     steps:
       - name: Checkout Repository
