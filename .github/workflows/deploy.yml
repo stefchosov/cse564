@@ -20,7 +20,7 @@ jobs:
       - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.VM_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
@@ -35,9 +35,9 @@ jobs:
               git clone https://github.com/${{ github.repository }} .
             fi
 
-            git pull origin main
+            git pull origin test
 
-            # run post-deploy script if present
+            # post-deploy script once applicable
             #if [ -f deploy.sh ]; then
               #chmod +x deploy.sh
               #./deploy.sh
