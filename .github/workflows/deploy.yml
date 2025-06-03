@@ -1,0 +1,43 @@
+name: Deploy to Test VM
+
+on:
+  push:
+    branches:
+      - test  # Change this if you want another branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: test  # This links to your GitHub 'test' environment
+
+    env:
+      DEPLOY_DIR: /
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VM_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to VM
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+            set -e
+            cd $DEPLOY_DIR
+
+            # If first time, clone repo
+            if [ ! -d ".git" ]; then
+              sudo git clone https://github.com/${{ github.repository }} .
+            fi
+            sudo git pull origin test
+
+            # post-deploy script once applicable
+            #if [ -f deploy.sh ]; then
+              #chmod +x deploy.sh
+              #./deploy.sh
+            #fi
+          EOF
