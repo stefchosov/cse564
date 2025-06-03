@@ -16,7 +16,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
-
       - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
@@ -32,13 +31,9 @@ jobs:
 
             # If first time, clone repo
             if [ ! -d ".git" ]; then
-              git clone https://github.com/${{ github.repository }} .
+              sudo git clone https://github.com/${{ github.repository }} .
             fi
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-
-            git pull origin test
+            sudo git pull origin test
 
             # post-deploy script once applicable
             #if [ -f deploy.sh ]; then
