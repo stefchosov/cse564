@@ -27,7 +27,8 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
           set -e
-          cd $DEPLOY_DIR
+          DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
+          cd "$DEPLOY_DIR"
           echo "Changed directory to $DEPLOY_DIR"
           if [ ! -d ".git" ]; then
             echo "Git directory not found, cloning repository..."
