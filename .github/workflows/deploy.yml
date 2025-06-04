@@ -26,17 +26,25 @@ jobs:
       - name: Deploy to VM
         run: |
           ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
-            set -e
-            cd $DEPLOY_DIR
+set -e
+cd $DEPLOY_DIR
+echo "Changed directory to $DEPLOY_DIR"
 
-            if [ ! -d ".git" ]; then
-              git clone git@github.com:${{ github.repository }} .
-            fi
+if [ ! -d ".git" ]; then
+  echo "Git directory not found, cloning repository..."
+  git clone git@github.com:${{ github.repository }} .
+  echo "Clone complete."
+else
+  echo "Git directory found."
+fi
 
-            git fetch origin
-            git checkout test || git checkout -b test origin/test
-            git pull origin test
-
+echo "Fetching origin..."
+git fetch origin
+echo "Checking out branch test..."
+git checkout test || git checkout -b test origin/test
+echo "Pulling latest changes..."
+git pull origin test
+echo "Update complete."
             # post-deploy script once applicable
             #if [ -f deploy.sh ]; then
               #chmod +x deploy.sh
