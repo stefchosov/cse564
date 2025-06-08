@@ -61,15 +61,24 @@ jobs:
             #   ./deploy.sh
             # fi
           EOF
-
       - name: Start web server on VM
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} 'bash -s' <<EOF
-cd "${{ env.DEPLOY_DIR }}"
-pkill -f "python3 web.py" || true
-nohup python3 web.py >> webserver.log 2>&1 &
-echo "Web server started, logging to webserver.log"
-EOF
+	run: |
+    	  ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -c '
+          cd "${{ env.DEPLOY_DIR }}"
+          pkill -f "python3 web.py" || true
+          nohup python3 web.py >> webserver.log 2>&1 &
+          echo "Web server started, logging to webserver.log"
+    '
+
+
+
+
+
+
+
+
+
+
 
 
 
