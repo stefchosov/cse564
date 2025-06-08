@@ -26,16 +26,35 @@ jobs:
 
       - name: Deploy Code to VM
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -s << 'EOF'
-          set -e
-          cd "${DEPLOY_DIR}"
-          echo "Killing existing web server if running..."
-          pkill -f "python3 web.py" || true
-          echo "Pulling latest code..."
-          git fetch origin
-          git checkout test || git checkout -b test origin/test
-          git pull origin test
-          echo "Starting web server..."
-          nohup python3 web.py > webserver.log 2>&1 &
-          echo "Code pulled successfully."
-          EOF
+            ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+            set -e
+            DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
+            cd "$DEPLOY_DIR"
+            echo "Changed directory to $DEPLOY_DIR"
+            echo "Killing existing web server if running..."
+            pkill -f "python3 web.py" || true
+            if [ ! -d ".git" ]; then
+              echo "Git directory not found, cloning repository..."
+              git clone git@github.com:${{ github.repository }} .
+              echo "Clone complete."
+            else
+              echo "Git directory found."
+            fi
+            echo "Resetting local changes and cleaning untracked files..."
+            git reset --hard
+            git clean -fd
+            echo "Fetching origin..."
+            git fetch origin
+            echo "Checking out branch test..."
+            git checkout test || git checkout -b test origin/test
+            echo "Pulling latest changes..."
+            git pull origin test
+            echo "Update complete."
+            echo "Starting web server..."
+            nohup python3 web.py > webserver.log 2>&1 &
+            # Uncomment below if you have a deploy.sh script
+            # if [ -f deploy.sh ]; then
+            #   chmod +x deploy.sh
+            #   ./deploy.sh
+            # fi
+            EOF
