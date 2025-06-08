@@ -40,7 +40,7 @@ jobs:
             git pull origin test
 
             echo "Code pulled successfully."
-EOF
+	EOF
 
       - name: Restart Web Server on VM
         run: |
@@ -51,5 +51,5 @@ EOF
 
             echo "Starting web server..."
             nohup python3 web.py > webserver.log 2>&1 &
-EOF
+	EOF
 
