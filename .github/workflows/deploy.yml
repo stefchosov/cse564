@@ -29,9 +29,6 @@ jobs:
           ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -s << 'EOF'
           set -e
           cd "${DEPLOY_DIR}"
-          echo "Resetting any local changes..."
-          git reset --hard
-          git clean -fd
           echo "Killing existing web server if running..."
           pkill -f "python3 web.py" || true
           echo "Pulling latest code..."
