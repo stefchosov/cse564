@@ -189,5 +189,5 @@ def login_user():
     return render_template_string(HTML_TEMPLATE, menu=MENU_OPTIONS, mode="message", message=message)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0")
 
