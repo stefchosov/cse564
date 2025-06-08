@@ -16,6 +16,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+
       - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
@@ -23,31 +24,40 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to VM
+      - name: Deploy CLI to VM
         run: |
           ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
-          set -e
-          DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
-          cd "$DEPLOY_DIR"
-          echo "Changed directory to $DEPLOY_DIR"
-          if [ ! -d ".git" ]; then
-            echo "Git directory not found, cloning repository..."
-            git clone git@github.com:${{ github.repository }} .
-            echo "Clone complete."
-          else
-            echo "Git directory found."
-          fi
-          
-          echo "Fetching origin..."
-          git fetch origin
-          echo "Checking out branch test..."
-          git checkout test || git checkout -b test origin/test
-          echo "Pulling latest changes..."
-          git pull origin test
-          echo "Update complete."
-            # post-deploy script once applicable
-            #if [ -f deploy.sh ]; then
-              #chmod +x deploy.sh
-              #./deploy.sh
-            #fi
+            set -e
+            DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
+            cd "$DEPLOY_DIR"
+            echo "Changed directory to $DEPLOY_DIR"
+            if [ ! -d ".git" ]; then
+              echo "Git directory not found, cloning repository..."
+              git clone git@github.com:${{ github.repository }} .
+              echo "Clone complete."
+            else
+              echo "Git directory found."
+            fi
+
+            echo "Fetching origin..."
+            git fetch origin
+            echo "Checking out branch test..."
+            git checkout test || git checkout -b test origin/test
+            echo "Pulling latest changes..."
+            git pull origin test
+            echo "Update complete."
+            # Uncomment below if you have a deploy.sh script
+            # if [ -f deploy.sh ]; then
+            #   chmod +x deploy.sh
+            #   ./deploy.sh
+            # fi
           EOF
+
+      - name: Start web server on VM
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+            cd ${{ env.DEPLOY_DIR }}
+            nohup python3 web.py > webserver.log 2>&1 &
+            echo "Web server started, logging to webserver.log"
+          EOF
+
