@@ -3,12 +3,12 @@ name: Deploy to Test VM
 on:
   push:
     branches:
-      - test  # Change this if you want another branch
+      - test
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: test  # This links to your GitHub 'test' environment
+    environment: test
 
     env:
       DEPLOY_DIR: /app/program/
@@ -24,64 +24,32 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy CLI to VM
+      - name: Deploy Code to VM
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -s <<EOF
             set -e
-            DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
-            cd "$DEPLOY_DIR"
-            echo "Changed directory to $DEPLOY_DIR"
+            cd "${DEPLOY_DIR}"
 
-            if [ ! -d ".git" ]; then
-              echo "Git directory not found, cloning repository..."
-              git clone git@github.com:${{ github.repository }} .
-              echo "Clone complete."
-            else
-              echo "Git directory found."
-            fi
-
-            echo "Resetting local changes and cleaning untracked files..."
+            echo "Resetting any local changes..."
             git reset --hard
             git clean -fd
 
-            echo "Fetching origin..."
+            echo "Pulling latest code..."
             git fetch origin
-
-            echo "Checking out branch test..."
             git checkout test || git checkout -b test origin/test
-
-            echo "Pulling latest changes..."
             git pull origin test
 
-            echo "Update complete."
+            echo "Code pulled successfully."
+EOF
 
-            # Uncomment below if you have a deploy.sh script
-            # if [ -f deploy.sh ]; then
-            #   chmod +x deploy.sh
-            #   ./deploy.sh
-            # fi
-          EOF
-      - name: Start web server on VM
-	run: |
-    	  ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -c '
-          cd "${{ env.DEPLOY_DIR }}"
-          pkill -f "python3 web.py" || true
-          nohup python3 web.py >> webserver.log 2>&1 &
-          echo "Web server started, logging to webserver.log"
-    '
+      - name: Restart Web Server on VM
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -s <<EOF
+            cd "${DEPLOY_DIR}"
+            echo "Killing existing web server if running..."
+            pkill -f "python3 web.py" || true
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            echo "Starting web server..."
+            nohup python3 web.py > webserver.log 2>&1 &
+EOF
 
