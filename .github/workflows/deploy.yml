@@ -41,4 +41,4 @@ jobs:
           echo "Starting web server..."
           nohup python3 web.py > webserver.log 2>&1 &
           echo "Code pulled successfully."
-EOF
+          EOF
