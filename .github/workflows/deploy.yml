@@ -26,30 +26,26 @@ jobs:
 
       - name: Deploy Code to VM
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -s <<EOF
-            set -e
-            cd "${DEPLOY_DIR}"
-
-            echo "Resetting any local changes..."
-            git reset --hard
-            git clean -fd
-
-            echo "Pulling latest code..."
-            git fetch origin
-            git checkout test || git checkout -b test origin/test
-            git pull origin test
-
-            echo "Code pulled successfully."
-	EOF
+          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -s << 'EOF'
+          set -e
+          cd "${DEPLOY_DIR}"
+          echo "Resetting any local changes..."
+          git reset --hard
+          git clean -fd
+          echo "Pulling latest code..."
+          git fetch origin
+          git checkout test || git checkout -b test origin/test
+          git pull origin test
+          echo "Code pulled successfully."
+EOF
 
       - name: Restart Web Server on VM
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -s <<EOF
-            cd "${DEPLOY_DIR}"
-            echo "Killing existing web server if running..."
-            pkill -f "python3 web.py" || true
-
-            echo "Starting web server..."
-            nohup python3 web.py > webserver.log 2>&1 &
-	EOF
+          ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -s << 'EOF'
+          cd "${DEPLOY_DIR}"
+          echo "Killing existing web server if running..."
+          pkill -f "python3 web.py" || true
+          echo "Starting web server..."
+          nohup python3 web.py > webserver.log 2>&1 &
+EOF
 
