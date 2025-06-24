@@ -29,8 +29,7 @@ def menu_choice():
         return render_template("index.html", menu=MENU_OPTIONS, mode="login", message=None)
     
     elif choice == "lookup":
-        return redirect(url_for("main.lookup"))
-
+    	return render_template("index.html", menu=MENU_OPTIONS, mode="lookup", message=None)
     else:
         message = "Unknown choice."
         return render_template("index.html", menu=MENU_OPTIONS, mode="message", message=message)
@@ -69,11 +68,28 @@ def lookup():
 
         if not (street and city and state):
             message = "Please fill all fields."
-            return render_template("lookup.html", message=message)
+            return render_template("index.html", message=message)
 
         from get_census_block import get_block_group_geoid
         block_group=(get_block_group_geoid(street, city, state))
-        return render_template("lookup.html", block_group=block_group)
+        print(block_group)
+        return render_template("index.html", mode="block_result", block_group=block_group)
 
-    return render_template("lookup.html")
+    return render_template("index.html", mode="lookup")
 
+@main_bp.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        password_hash = generate_password_hash(password)
+
+        conn = get_db_connection()
+        with conn.cursor() as cursor:
+            cursor.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s)", (username, password_hash))
+            conn.commit()
+        conn.close()
+
+        return redirect(url_for("main.index"))
+
+    return render_template("register.html")

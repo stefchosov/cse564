@@ -77,52 +77,77 @@
 </head>
 <body>
 
-<h1>Welcome to Walkdata — Choose an action:</h1>
+  <h1>Welcome to Walkdata — Choose an action:</h1>
 
-{% if mode == "menu" %}
-<ul>
-  {% for value, label in menu %}
-    <li>
-      <form method="post" action="{{ url_for('main.menu_choice') }}">
-        <input type="hidden" name="choice" value="{{ value }}">
-        <button type="submit">{{ label }}</button>
-      </form>
-    </li>
-  {% endfor %}
-</ul>
-
-{% elif mode == "add" %}
-  <h2>Add a New City</h2>
-  <form method="post" action="{{ url_for('main.add_city') }}">
-    <label for="city_name">City Name:</label><br>
-    <input type="text" id="city_name" name="city_name" required><br>
-    <label for="walkability_score">Walkability Score (1-100):</label><br>
-    <input type="number" id="walkability_score" name="walkability_score" min="1" max="100" required><br>
-    <button type="submit">Add City</button>
-  </form>
-  <form method="get" action="{{ url_for('main.index') }}">
-    <button type="submit" class="back-button">Back to Menu</button>
-  </form>
-
-{% elif mode == "login" %}
-  <h2>Log in User for Research</h2>
-  <form method="post" action="{{ url_for('main.login_user') }}">
-    <label for="username">Username:</label><br>
-    <input type="text" id="username" name="username" required><br>
-    <label for="password">Password:</label><br>
-    <input type="password" id="password" name="password" required><br>
-    <button type="submit">Log In</button>
-  </form>
-  <form method="get" action="{{ url_for('main.index') }}">
-    <button type="submit" class="back-button">Back to Menu</button>
-  </form>
-
-{% else %}
-  <p class="message">{{ message }}</p>
-  <form method="get" action="{{ url_for('main.index') }}">
-    <button type="submit" class="back-button">Back to Menu</button>
-  </form>
-{% endif %}
-
-</body>
-</html>
+  {% if mode == "menu" %}
+    <ul>
+      {% for value, label in menu %}
+        <li>
+          <form method="post" action="{{ url_for('main.menu_choice') }}">
+            <input type="hidden" name="choice" value="{{ value }}">
+            <button type="submit">{{ label }}</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  
+  {% elif mode == "add" %}
+    <h2>Add a New City</h2>
+    <form method="post" action="{{ url_for('main.add_city') }}">
+      <label for="city_name">City Name:</label><br>
+      <input type="text" id="city_name" name="city_name" required><br>
+      <label for="walkability_score">Walkability Score (1-100):</label><br>
+      <input type="number" id="walkability_score" name="walkability_score" min="1" max="100" required><br>
+      <button type="submit">Add City</button>
+    </form>
+    <form method="get" action="{{ url_for('main.index') }}">
+      <button type="submit" class="back-button">Back to Menu</button>
+    </form>
+  
+  {% elif mode == "login" %}
+    <h2>Log in User for Research</h2>
+    <form method="post" action="{{ url_for('main.login_user') }}">
+      <label for="username">Username:</label><br>
+      <input type="text" id="username" name="username" required><br>
+      <label for="password">Password:</label><br>
+      <input type="password" id="password" name="password" required><br>
+      <button type="submit">Log In</button>
+    </form>
+    <form method="get" action="{{ url_for('main.index') }}">
+      <button type="submit" class="back-button">Back to Menu</button>
+    </form>
+  
+  {% elif mode == "lookup" %}
+    <h2>Lookup Census Block Group</h2>
+    <form method="post" action="{{ url_for('main.lookup') }}">
+      <label for="street">Street Address:</label><br>
+      <input type="text" id="street" name="street" required><br>
+      <label for="city">City:</label><br>
+      <input type="text" id="city" name="city" required><br>
+      <label for="state">State:</label><br>
+      <input type="text" id="state" name="state" required><br>
+      <button type="submit">Lookup Block Group</button>
+    </form>     
+    <form method="get" action="{{ url_for('main.index') }}">
+      <button type="submit" class="back-button">Back to Menu</button>
+    </form>     
+  
+  {% elif mode == "block_result" %}
+    {% if block_group %}
+      <p class="message">Block Group FIPS: {{ block_group }}</p>
+    {% else %}
+      <p class="message">Error: {{ error }}</p>
+    {% endif %}
+    <form method="get" action="{{ url_for('main.index') }}">
+      <button type="submit" class="back-button">Back to Menu</button>
+    </form>
+  
+  {% else %}
+    <p class="message">{{ message }}</p>
+    <form method="get" action="{{ url_for('main.index') }}">
+      <button type="submit" class="back-button">Back to Menu</button>
+    </form>
+  {% endif %}
+  
+  </body>
+  </html>
