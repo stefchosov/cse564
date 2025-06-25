@@ -31,8 +31,6 @@ jobs:
             DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
             cd "$DEPLOY_DIR"
             echo "Changed directory to $DEPLOY_DIR"
-            echo "Killing existing web server if running..."
-            pkill -f "python3 web.py" || true
             if [ ! -d ".git" ]; then
               echo "Git directory not found, cloning repository..."
               git clone git@github.com:${{ github.repository }} .
@@ -50,8 +48,8 @@ jobs:
             echo "Pulling latest changes..."
             git pull origin test
             echo "Update complete."
-            echo "Starting web server..."
-            nohup python3 web.py > webserver.log 2>&1 &
+            echo "Restarting web server..."
+            sudo systemctl restart flaskapp.service
             # Uncomment below if you have a deploy.sh script
             # if [ -f deploy.sh ]; then
             #   chmod +x deploy.sh
