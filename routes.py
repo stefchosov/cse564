@@ -7,7 +7,6 @@ main_bp = Blueprint("main", __name__)
 # Menu options for the application
 MENU_OPTIONS = [
     ("view", "View Walkable Cities"),
-    ("add", "Add a New City"),
     ("login", "Log in User for Research"),
     ("lookup", "Lookup Census Block Group from Address"),
 ]
@@ -27,7 +26,22 @@ def index():
         str: Renders the index.html template with the appropriate mode and menu options.
     """
     mode = request.args.get("mode", "welcome")  # Default to "welcome" mode
-    return render_template("index.html", menu=MENU_OPTIONS, mode=mode, message=None)
+
+    # Check if the user is logged in
+    if 'user_id' in session and session['user_id'] is not None:
+        if mode == "welcome":  # Redirect to the logged-in menu if the user is authenticated
+            return redirect(url_for("main.index", mode="menu"))
+        elif mode == "menu":
+            return render_template("index.html", menu=MENU_OPTIONS, mode="menu", message=None)
+
+    # If the user is not logged in, render the appropriate mode
+    if mode == "login":
+        return render_template("index.html", mode="login", message=None)
+    elif mode == "register":
+        return render_template("index.html", mode="register", message=None)
+
+    # Default to the welcome screen for unauthenticated users
+    return render_template("index.html", mode="welcome", message=None)
 
 @main_bp.route("/choose", methods=["POST"])
 @login_required
@@ -160,8 +174,9 @@ def protected_route():
         None
 
     Returns:
-        str: Renders the index.html template with the lookup form or the result.
+        str: Renders the index.html template with the lookup form, the result, or redirects to the menu.
     """
+    print("Session state in /protected_route:", session)  # Debugging log
     if request.method == "POST":
         street = request.form.get("street")
         city = request.form.get("city")
@@ -175,4 +190,33 @@ def protected_route():
         block_group = get_block_group_geoid(street, city, state)
         return render_template("index.html", mode="block_result", block_group=block_group)
 
-    return render_template("index.html", mode="lookup")
+    return redirect(url_for("main.index", mode="menu"))
+
+@main_bp.route("/lookup_city", methods=["GET", "POST"])
+@login_required
+def lookup_city():
+    """
+    Handles the lookup of city information.
+
+    Args:
+        None
+
+    Returns:
+        str: Renders the index.html template with the lookup form, the result, or redirects to the menu.
+    """
+    if request.method == "POST":
+        city_name = request.form.get("city_name")
+
+        if not city_name:
+            message = "Please provide a valid city name."
+            return render_template("index.html", mode="lookup_city", message=message)
+
+        try:
+            city_details = {"name": city_name, "walkability_score": 85}  # Mock data
+            return render_template("index.html", mode="city_result", city_details=city_details)
+        except Exception as e:
+            message = f"Error during city lookup: {str(e)}"
+            return render_template("index.html", mode="lookup_city", message=message)
+
+    print("Redirecting to menu")
+    return redirect(url_for("main.index", mode="menu"))

@@ -150,14 +150,14 @@
         <br>
         <button type="submit">Add City</button>
     </form>
-    <form method="get" action="{{ url_for('main.index') }}">
+    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
         <button type="submit" class="back-button">Back to Menu</button>
     </form>
   
   {% elif mode == "message" %}
     <h1>Message</h1>
     <p>{{ message }}</p>
-    <form method="get" action="{{ url_for('main.index') }}">
+    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
         <button type="submit" class="back-button">Back to Menu</button>
     </form>
   
@@ -189,7 +189,7 @@
   
   {% else %}
     <p class="message">{{ message }}</p>
-    <form method="get" action="{{ url_for('main.index') }}">
+    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
       <button type="submit" class="back-button">Back to Menu</button>
     </form>
   {% endif %}
