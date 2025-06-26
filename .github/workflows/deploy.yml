@@ -21,6 +21,8 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VM_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
+          echo "${{secrets.VM_HOST}}"
+          echo "${{secrets.VM_USER}}"
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
