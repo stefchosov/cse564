@@ -3,6 +3,17 @@ from dotenv import load_dotenv
 import mysql.connector
 from mysql.connector import Error
 import bcrypt
+from functools import wraps
+from flask import session, redirect, url_for
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        print("Checking session in login_required:", session)
+        if 'user_id' not in session or session['user_id'] is None:
+            return redirect(url_for('main.index', mode='login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def connect_to_database(host=None, user=None, password=None, database=None):
     """
@@ -78,42 +89,43 @@ def hash_password(plain_password: str) -> bytes:
     hashed = bcrypt.hashpw(plain_password.encode('utf-8'), salt)
     return hashed
 
-def validate_user_credentials(username: str, plain_password: str) -> bool:
+def validate_user_credentials(username: str, plain_password: str):
     """
-    Validates user login by checking hashed password from the database.
-    
+    Validates a user's credentials.
+
     Args:
         username (str): The username or email used for login.
         plain_password (str): The plain text password entered by the user.
-    
+
     Returns:
-        bool: True if credentials are valid, False otherwise.
+        int: The user ID if credentials are valid, None otherwise.
     """
     connection = connect_to_database()
     if not connection:
         print("Failed to connect to the database.")
-        return False
+        return None
 
     try:
         cursor = connection.cursor()
-        query = "SELECT password FROM users WHERE username = %s"
+        query = "SELECT id, password FROM users WHERE username = %s"
         cursor.execute(query, (username,))
         result = cursor.fetchone()
 
         if result:
-            stored_hash = result[0].encode('utf-8')
+            user_id = result[0]  # Extract user ID
+            stored_hash = result[1].encode('utf-8')  # Extract hashed password
             if bcrypt.checkpw(plain_password.encode('utf-8'), stored_hash):
                 print("Password is valid.")
-                return True
+                return user_id  # Return user ID if credentials are valid
             else:
                 print("Invalid password.")
         else:
             print("User not found.")
-        return False
+        return None
 
     except Error as e:
         print(f"Error during authentication: {e}")
-        return False
+        return None
 
     finally:
         cursor.close()

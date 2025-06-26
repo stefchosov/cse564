@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, session
+from utils import login_required, create_user, validate_user_credentials
+
 main_bp = Blueprint("main", __name__)
 
 MENU_OPTIONS = [
@@ -10,11 +12,13 @@ MENU_OPTIONS = [
 
 cities = []
 
-@main_bp.route("/", methods=["GET"])
+@main_bp.route("/", methods=["GET", "POST"])
 def index():
-    return render_template("index.html", menu=MENU_OPTIONS, mode="menu", message=None)
+    mode = request.args.get("mode", "welcome")  # Default to "welcome" mode
+    return render_template("index.html", menu=MENU_OPTIONS, mode=mode, message=None)
 
 @main_bp.route("/choose", methods=["POST"])
+@login_required
 def menu_choice():
     choice = request.form.get("choice")
 
@@ -22,19 +26,18 @@ def menu_choice():
         message = "Feature coming soon: View Walkable Cities."
         return render_template("index.html", menu=MENU_OPTIONS, mode="message", message=message)
 
-    elif choice == "add":
-        return render_template("index.html", menu=MENU_OPTIONS, mode="add", message=None)
-
-    elif choice == "login":
-        return render_template("index.html", menu=MENU_OPTIONS, mode="login", message=None)
-    
     elif choice == "lookup":
-    	return render_template("index.html", menu=MENU_OPTIONS, mode="lookup", message=None)
+        return render_template("index.html", menu=MENU_OPTIONS, mode="lookup", message=None)
+
+    elif choice == "logout":
+        return redirect(url_for("main.logout"))
+
     else:
         message = "Unknown choice."
         return render_template("index.html", menu=MENU_OPTIONS, mode="message", message=message)
 
 @main_bp.route("/add_city", methods=["POST"])
+@login_required
 def add_city():
     city_name = request.form.get("city_name")
     walk_score = request.form.get("walkability_score")
@@ -43,24 +46,56 @@ def add_city():
         message = f"Added city '{city_name}' with walkability score {walk_score}."
     else:
         message = "Please provide valid city information."
-
     return render_template("index.html", menu=MENU_OPTIONS, mode="message", message=message)
 
-@main_bp.route("/login_user", methods=["POST"])
-def login_user():
-    username = request.form.get("username")
-    password = request.form.get("password")
+@main_bp.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form.get("username")
+        name = request.form.get("name")  # Full name field
+        email = request.form.get("email")  # Email field
+        password = request.form.get("password")  # Password field
 
-    # Dummy check: accept username "researcher" and password "pass123"
-    if username == "researcher" and password == "pass123":
-        message = f"Login successful! Welcome, {username}."
-    else:
-        message = "Login failed: Invalid username or password."
+        try:
+            # Use the create_user helper method
+            user_id = create_user(username, name, email, password)
+            session['user_id'] = user_id
+            return redirect(url_for("main.index"))
+        except Exception as e:
+            message = f"Error creating user: {str(e)}"
+            return render_template("index.html", mode="register", message=message)
 
-    return render_template("index.html", menu=MENU_OPTIONS, mode="message", message=message)
+    return render_template("index.html", mode="register")
 
-@main_bp.route("/lookup", methods=["GET", "POST"])
-def lookup():
+@main_bp.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        try:
+            user_id = validate_user_credentials(username, password)
+            if user_id:
+                session['user_id'] = user_id
+                # Redirect to the menu after successful login
+                return redirect(url_for("main.index", mode="menu"))
+            else:
+                message = "Invalid username or password."
+                return render_template("index.html", mode="login", message=message)
+        except Exception as e:
+            message = f"Error during login: {str(e)}"
+            return render_template("index.html", mode="login", message=message)
+
+    return render_template("index.html", mode="login")
+
+@main_bp.route("/logout")
+def logout():
+    session.pop('user_id', None)
+    return redirect(url_for("main.index", mode="login"))
+
+@main_bp.route("/protected_route", methods=["GET", "POST"])
+@login_required
+def protected_route():
     if request.method == "POST":
         street = request.form.get("street")
         city = request.form.get("city")
@@ -68,28 +103,10 @@ def lookup():
 
         if not (street and city and state):
             message = "Please fill all fields."
-            return render_template("index.html", message=message)
+            return render_template("index.html", mode="lookup", message=message)
 
         from get_census_block import get_block_group_geoid
-        block_group=(get_block_group_geoid(street, city, state))
-        print(block_group)
+        block_group = get_block_group_geoid(street, city, state)
         return render_template("index.html", mode="block_result", block_group=block_group)
 
     return render_template("index.html", mode="lookup")
-
-@main_bp.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        password_hash = generate_password_hash(password)
-
-        conn = get_db_connection()
-        with conn.cursor() as cursor:
-            cursor.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s)", (username, password_hash))
-            conn.commit()
-        conn.close()
-
-        return redirect(url_for("main.index"))
-
-    return render_template("register.html")
