@@ -21,14 +21,12 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VM_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
-          echo "${{secrets.VM_HOST}}"
-          echo "${{secrets.VM_USER}}"
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ vars.VM_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy Code to VM
         run: |
-            ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+            ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ vars.VM_HOST }} << 'EOF'
             set -e
             DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
             cd "$DEPLOY_DIR"
