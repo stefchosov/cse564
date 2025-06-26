@@ -7,10 +7,20 @@ from functools import wraps
 from flask import session, redirect, url_for
 
 def login_required(f):
+    """
+    Decorator to enforce login for protected routes.
+
+    Args:
+        f (function): The route function to be wrapped.
+
+    Returns:
+        function: The wrapped function that checks if the user is logged in.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         print("Checking session in login_required:", session)
         if 'user_id' not in session or session['user_id'] is None:
+            # Redirect to login page if user is not authenticated
             return redirect(url_for('main.index', mode='login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -38,19 +48,19 @@ def connect_to_database(host=None, user=None, password=None, database=None):
         user_val = os.getenv("DB_USER", user)
         password_val = os.getenv("DB_PASSWORD", password)
         database_val = os.getenv("DB_NAME", database)
-        # Retrieve credentials from environment variables
+
+        # Establish connection to the database
         connection = mysql.connector.connect(
             host=host_val,
             user=user_val,
             password=password_val,
             database=database_val
         )
-        print(f"Connecting with host={host_val}, user={user_val}, database={database_val}")
-        if connection.is_connected():
-            return connection
+        return connection
     except Error as e:
+        # Print error if connection fails
         print(f"Error connecting to database: {e}")
-        raise  
+        return None
 
 def create_user(username: str, name: str, email: str, password: str):
     hashed_password = hash_password(password)
@@ -84,14 +94,24 @@ def create_user(username: str, name: str, email: str, password: str):
 
 
 def hash_password(plain_password: str) -> bytes:
-    # Generate salt and hash the password
+    """
+    Hashes a plain text password using bcrypt.
+
+    Args:
+        plain_password (str): The plain text password to be hashed.
+
+    Returns:
+        bytes: The hashed password.
+    """
+    # Generate a salt for bcrypt hashing
     salt = bcrypt.gensalt()
+    # Hash the password using bcrypt and the generated salt
     hashed = bcrypt.hashpw(plain_password.encode('utf-8'), salt)
     return hashed
 
 def validate_user_credentials(username: str, plain_password: str):
     """
-    Validates a user's credentials.
+    Validates a user's credentials by checking the username and password against the database.
 
     Args:
         username (str): The username or email used for login.
@@ -100,20 +120,25 @@ def validate_user_credentials(username: str, plain_password: str):
     Returns:
         int: The user ID if credentials are valid, None otherwise.
     """
+    # Establish a connection to the database
     connection = connect_to_database()
     if not connection:
         print("Failed to connect to the database.")
         return None
 
     try:
+        # Create a cursor to execute SQL queries
         cursor = connection.cursor()
+        # Query to fetch the user ID and hashed password for the given username
         query = "SELECT id, password FROM users WHERE username = %s"
         cursor.execute(query, (username,))
         result = cursor.fetchone()
 
         if result:
-            user_id = result[0]  # Extract user ID
-            stored_hash = result[1].encode('utf-8')  # Extract hashed password
+            # Extract user ID and hashed password from the query result
+            user_id = result[0]
+            stored_hash = result[1].encode('utf-8')
+            # Validate the provided password against the stored hash
             if bcrypt.checkpw(plain_password.encode('utf-8'), stored_hash):
                 print("Password is valid.")
                 return user_id  # Return user ID if credentials are valid
@@ -124,42 +149,11 @@ def validate_user_credentials(username: str, plain_password: str):
         return None
 
     except Error as e:
+        # Handle any database errors
         print(f"Error during authentication: {e}")
         return None
 
     finally:
+        # Ensure the cursor and connection are closed
         cursor.close()
         connection.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
