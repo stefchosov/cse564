@@ -25,7 +25,7 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def connect_to_database(host=None, user=None, password=None, database=None):
+def execute_query(query, params=None):
     """
     Establishes a connection to the MySQL database.
 
@@ -44,10 +44,10 @@ def connect_to_database(host=None, user=None, password=None, database=None):
     try:
         # Load environment variables from .env file
         load_dotenv()
-        host_val = os.getenv("DB_HOST", host)
-        user_val = os.getenv("DB_USER", user)
-        password_val = os.getenv("DB_PASSWORD", password)
-        database_val = os.getenv("DB_NAME", database)
+        host_val = os.getenv("DB_HOST")
+        user_val = os.getenv("DB_USER")
+        password_val = os.getenv("DB_PASSWORD")
+        database_val = os.getenv("DB_NAME")
 
         # Establish connection to the database
         connection = mysql.connector.connect(
@@ -56,41 +56,67 @@ def connect_to_database(host=None, user=None, password=None, database=None):
             password=password_val,
             database=database_val
         )
-        return connection
     except Error as e:
         # Print error if connection fails
         print(f"Error connecting to database: {e}")
         return None
+    cursor = connection.cursor(dictionary=True)  # Use dictionary=True for row results as dicts
+            
+    # Execute the query with parameters if provided
+    if params:
+        try:
+            cursor.execute(query, params)
+        except Error as e:
+            print(f"Error executing query: {str(e)}")
+            return []
+    else:
+        try:
+            cursor.execute(query)
+        except Error as e:
+            print(f"Error executing query: {str(e)}")
+            return []
+    # Fetch all results
+    results = cursor.fetchall()
+
+    # Commit changes if it's an INSERT/UPDATE/DELETE query
+    connection.commit()
+
+    # Close the cursor and connection
+    cursor.close()
+    connection.close()
+
+    return results
+
+    
 
 def create_user(username: str, name: str, email: str, password: str):
+    """
+    Creates a new user in the database.
+
+    Args:
+        username (str): The username of the user.
+        name (str): The full name of the user.
+        email (str): The email address of the user.
+        password (str): The plaintext password of the user.
+
+    Returns:
+        bool: True if the user was created successfully, False otherwise.
+    """
     hashed_password = hash_password(password)
-    connection = connect_to_database()
-    if not connection:
-        print("Failed to connect to the database.")
-        return False
 
     try:
-        cursor = connection.cursor()
-
         sql_insert_query = """
         INSERT INTO users (username, name, email, password)
         VALUES (%s, %s, %s, %s)
         """
+        params = (username, name, email, hashed_password)
 
-        cursor.execute(sql_insert_query, (username, name, email, hashed_password.decode('utf-8')))
-        connection.commit()
-        new_user_id = cursor.lastrowid
-        print(f"User created successfully with ID: {new_user_id}")
-        return new_user_id
-
-
-    except Error as e:
-        print(f"Error while inserting user: {e}")
-        return None
-
-    finally:
-        cursor.close()
-        connection.close()
+        # Use execute_query to insert the user
+        execute_query(sql_insert_query, params)
+        return True
+    except Exception as e:
+        print(f"Error creating user: {str(e)}")
+        return False
 
 
 def hash_password(plain_password: str) -> bytes:
@@ -109,182 +135,157 @@ def hash_password(plain_password: str) -> bytes:
     hashed = bcrypt.hashpw(plain_password.encode('utf-8'), salt)
     return hashed
 
-def validate_user_credentials(username: str, plain_password: str):
+def validate_user_credentials(username: str, password: str) -> int:
     """
-    Validates a user's credentials by checking the username and password against the database.
+    Validates a user's credentials by checking the username and hashed password in the database.
 
     Args:
-        username (str): The username or email used for login.
-        plain_password (str): The plain text password entered by the user.
+        username (str): The username of the user.
+        password (str): The plaintext password provided by the user.
 
     Returns:
-        int: The user ID if credentials are valid, None otherwise.
+        int: The user ID if the credentials are valid, or None if invalid.
     """
-    # Establish a connection to the database
-    connection = connect_to_database()
-    if not connection:
-        print("Failed to connect to the database.")
-        return None
-
     try:
-        # Create a cursor to execute SQL queries
-        cursor = connection.cursor()
-        # Query to fetch the user ID and hashed password for the given username
-        query = "SELECT id, password FROM users WHERE username = %s"
-        cursor.execute(query, (username,))
-        result = cursor.fetchone()
+        # Query to fetch the user record based on the username
+        sql_query = """
+        SELECT id, password FROM users WHERE username = %s
+        """
+        params = (username,)
 
-        if result:
-            # Extract user ID and hashed password from the query result
-            user_id = result[0]
-            stored_hash = result[1].encode('utf-8')
-            # Validate the provided password against the stored hash
-            if bcrypt.checkpw(plain_password.encode('utf-8'), stored_hash):
-                print("Password is valid.")
-                return user_id  # Return user ID if credentials are valid
-            else:
-                print("Invalid password.")
-        else:
-            print("User not found.")
+        # Use execute_query to fetch the user record
+        results = execute_query(sql_query, params)
+
+        if results:
+            user_record = results[0]
+            hashed_password = user_record["password"]
+
+            # Validate the provided password against the hashed password
+            if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+                return user_record["id"]  # Return the user ID if credentials are valid
+
+        print("Invalid username or password.")
+        return None
+    except Exception as e:
+        print(f"Error validating user credentials: {str(e)}")
         return None
 
-    except Error as e:
-        # Handle any database errors
-        print(f"Error during authentication: {e}")
-        return None
-
-    finally:
-        # Ensure the cursor and connection are closed
-        cursor.close()
-        connection.close()
-
-def save_search(search_id, street, city, state):
+def save_search(user_id, street, city, state, census_block):
     """
-    Saves a search record to the database for the logged-in user.
+    Saves a search record for a user in the database.
 
     Args:
-        search_id (str): The unique identifier for the search.
-        street, city, state (str): The address associated with the search.
-
-    Raises:
-        Exception: If the user is not logged in.
+        user_id (int): The ID of the user.
+        street (str): The street address.
+        city (str): The city name.
+        state (str): The state name.
 
     Returns:
-        bool: True if the search is saved successfully, False otherwise.
+        bool: True if the search was saved successfully, False otherwise.
     """
-    user_id = session.get('user_id')
-    if not user_id:
-        raise Exception("User not logged in")
+    try:
+        # Generate a unique search_id for the user
+        new_search_id = generate_search_id(user_id)
 
-    connection = connect_to_database()
-    if not connection:
-        print("Failed to connect to the database.")
+        # Check if the search record already exists for the user
+        query_exists = """
+        SELECT COUNT(*) FROM searches WHERE user_id = %s AND street = %s AND city = %s AND state = %s AND census_block = %s
+        """
+        params_exists = (user_id, street, city, state, census_block)
+        exists = execute_query(query_exists, params_exists)[0]['COUNT(*)']
+
+        if exists > 0:
+            print(f"Search with address {street, city, state} already exists for user {user_id}.")
+            return False
+
+        # Insert the new search record
+        query_insert = """
+        INSERT INTO searches (user_id, search_id, street, city, state, census_block)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        params_insert = (user_id, new_search_id, street, city, state, census_block)
+        execute_query(query_insert, params_insert)
+
+        print(f"Search {new_search_id} saved for user {user_id} with address {street, city, state}")
+        return True
+    except Exception as e:
+        print(f"Error saving search: {str(e)}")
         return False
-    # Create a cursor to execute SQL queries
-    cursor = connection.cursor()
-    # Get the maximum search_id for the user to ensure unique search_id
-    # If no searches exist, start from 0
-    cursor.execute("SELECT MAX(search_id) FROM searches WHERE user_id = %s", (user_id,))
-    max_search_id = cursor.fetchone()[0]
-    new_search_id = 0 if max_search_id is None else max_search_id + 1
-    # Insert the search record into the database
-    search_id = new_search_id  # Use the new search ID for this search
-    
-    # Prepare the SQL query to insert the search record
-    # Check if the search record already exists for the user
-    cursor.execute(
-        "SELECT COUNT(*) FROM searches WHERE user_id = %s AND street = %s AND city = %s AND state = %s",
-        (user_id, street, city, state)
-    )
-    exists = cursor.fetchone()[0]
 
-    if exists > 0:
-        print(f"Search with address {street, city, state} already exists for user {user_id}.")
-        cursor.close()
-        connection.close()
-        return False
-    sql = "INSERT INTO searches (user_id, search_id, street, city, state) VALUES (%s, %s, %s, %s, %s)"
-    values = (user_id, new_search_id, street, city, state)
-    cursor.execute(sql, values)
-    connection.commit()
-    cursor.close()
-    connection.close()
-    print(f"Search {search_id} saved for user {user_id} with address f{street, city, state}")
-
-def fetch_distinct_options(user_id, column):
+def generate_search_id(user_id):
     """
-    Fetches distinct values for a specific column (e.g., city or state) from the saved searches.
+    Generates a unique search ID for a specific user.
+
+    Args:
+        user_id (int): The ID of the user.
+
+    Returns:
+        int: The next search ID for the user.
+    """
+    query = "SELECT MAX(search_id) FROM searches WHERE user_id = %s"
+    params = (user_id,)
+    result = execute_query(query, params)
+
+    if result and result[0]['MAX(search_id)'] is not None:
+        return result[0]['MAX(search_id)'] + 1  # Increment the highest search_id for the user
+    else:
+        return 1  # Start with ID 1 if the user has no searches
+
+def fetch_distinct_options(user_id, column, dependent_column=None, dependent_value=None):
+    """
+    Fetch distinct values for a column (e.g., city or state) with optional dependent filtering.
 
     Args:
         user_id (int): The ID of the user.
         column (str): The column to fetch distinct values for (e.g., "city" or "state").
+        dependent_column (str): The column to filter by (e.g., "state" or "city").
+        dependent_value (str): The value to filter the dependent column by.
 
     Returns:
         list: A list of distinct values for the specified column.
     """
-    connection = connect_to_database()
-    if not connection:
-        print("Failed to connect to the database.")
-        return []
+    query = f"SELECT DISTINCT {column} FROM searches WHERE user_id = %s"
+    params = [user_id]
 
-    try:
-        cursor = connection.cursor()
-        query = f"SELECT DISTINCT {column} FROM searches WHERE user_id = %s ORDER BY {column} ASC"
-        cursor.execute(query, (user_id,))
-        options = [row[0] for row in cursor.fetchall()]
-        return options
-    except Exception as e:
-        print(f"Error fetching distinct options for {column}: {str(e)}")
-        return []
-    finally:
-        cursor.close()
-        connection.close()
+    if dependent_column and dependent_value:
+        query += f" AND {dependent_column} = %s"
+        params.append(dependent_value)
 
-def fetch_saved_searches(user_id, city=None, state=None, sort_by="city"):
+    query += f" ORDER BY {column}"  # Sort results alphabetically
+
+    # Use execute_query to fetch distinct options
+    results = execute_query(query, params)
+
+    # Extract values from the dictionaries
+    return [row[column] for row in results]
+
+def fetch_saved_addresses(user_id, city_filter=None, state_filter=None, sort_by="city"):
     """
-    Fetches saved searches for a specific user from the database, with optional filtering and sorting.
+    Fetch saved addresses for a user with optional filtering and sorting.
 
     Args:
         user_id (int): The ID of the user.
-        city (str): Optional city filter.
-        state (str): Optional state filter.
-        sort_by (str): Column to sort by (default is "city").
+        city_filter (str): Optional city filter.
+        state_filter (str): Optional state filter.
+        sort_by (str): Sort by "city" or "state".
 
     Returns:
-        list: A list of saved searches.
+        list: A list of saved addresses.
     """
-    connection = connect_to_database()
-    if not connection:
-        print("Failed to connect to the database.")
-        return []
+    query = "SELECT street, city, state, census_block FROM searches WHERE user_id = %s"
+    params = [user_id]
 
-    try:
-        cursor = connection.cursor(dictionary=True)
-        query = "SELECT street, city, state FROM searches WHERE user_id = %s"
-        params = [user_id]
+    if city_filter:
+        query += " AND city = %s"
+        params.append(city_filter)
+    if state_filter:
+        query += " AND state = %s"
+        params.append(state_filter)
 
-        # Add filtering conditions
-        if city:
-            query += " AND city = %s"
-            params.append(city)
-        if state:
-            query += " AND state = %s"
-            params.append(state)
+    query += f" ORDER BY {sort_by}, street"
 
-        # Add sorting
-        query += f" ORDER BY {sort_by} ASC"
-        print("Query:", query, "Params:", params)  # Debugging log
-
-        cursor.execute(query, tuple(params))
-        searches = cursor.fetchall()
-        print("Searches:", searches)  # Debugging log
-        return searches
-    except Exception as e:
-        print(f"Error fetching saved searches: {str(e)}")  # Debugging log
-        return []
-    finally:
-        cursor.close()
-        connection.close()
+    # Use execute_query to fetch the addresses
+    return execute_query(query, params)
 
 def delete_saved_addresses(user_id, addresses):
     """
@@ -297,21 +298,15 @@ def delete_saved_addresses(user_id, addresses):
     Returns:
         None
     """
-    connection = connect_to_database()
-    if not connection:
-        print("Failed to connect to the database.")
-        return
-
     try:
-        cursor = connection.cursor()
         for address in addresses:
             street, city, state = address.split(", ")
             query = "DELETE FROM searches WHERE user_id = %s AND street = %s AND city = %s AND state = %s"
-            cursor.execute(query, (user_id, street, city, state))
-        connection.commit()
+            params = (user_id, street, city, state)
+
+            # Use execute_query to delete the address
+            execute_query(query, params)
+
         print(f"Deleted addresses: {addresses}")
     except Exception as e:
         print(f"Error deleting saved addresses: {str(e)}")
-    finally:
-        cursor.close()
-        connection.close()

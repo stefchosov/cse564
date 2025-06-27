@@ -73,6 +73,88 @@
         .back-button:hover {
             background-color: #606b6f;
         }
+        form label {
+            display: block; /* Make labels block-level */
+            margin-bottom: 5px; /* Add spacing below labels */
+        }
+
+        form input {
+            display: block; /* Make inputs block-level */
+            margin-bottom: 15px; /* Add spacing below inputs */
+        }
+
+        form button {
+            margin-top: 10px; /* Add spacing above the button */
+        }
+
+        form label {
+            display: inline-block; /* Make labels inline-block */
+            width: auto; /* Set a fixed width for labels */
+            vertical-align: middle; /* Align labels vertically */
+            margin-right: 2px; /* Add spacing between label and dropdown */
+        }
+
+        form select {
+            display: inline-block; /* Make dropdowns inline-block */
+            width: auto; /* Adjust width as needed */
+            vertical-align: middle; /* Align dropdowns vertically */
+            margin: 0;
+        }
+
+        form button {
+            margin-top: 15px; /* Add spacing above buttons */
+        }
+
+        form label {
+            display: inline-block; /* Ensure labels are inline with checkboxes */
+            margin-right: 10px; /* Add spacing between checkbox and label */
+            vertical-align: middle; /* Align labels vertically with checkboxes */
+        }
+
+        form input[type="checkbox"] {
+            display: inline-block; /* Ensure checkboxes are inline */
+            vertical-align: middle; /* Align checkboxes vertically with labels */
+            margin-right: 5px; /* Add spacing between checkbox and label */
+        }
+
+        /* Style for the table */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Style for table headers */
+        th {
+            background-color: #f4f4f4;
+            color: #333;
+            font-weight: bold;
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        /* Style for table cells */
+        td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        /* Alternate row colors */
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:nth-child(odd) {
+            background-color: #fff;
+        }
+
+        /* Hover effect for rows */
+        tr:hover {
+            background-color: #f1f1f1;
+        }
     </style>
 </head>
 <body>
@@ -88,6 +170,10 @@
         <input type="hidden" name="mode" value="register">
         <button type="submit">Register</button>
     </form>
+    <form method="GET" action="{{ url_for('main.addresses_lookup') }}">
+        <input type="hidden" name="mode" value="guest">
+        <button type="submit">Guest Mode</button>
+    </form>
   
   {% elif mode == "login" %}
     <h1>Login</h1>
@@ -97,13 +183,14 @@
     <form method="POST" action="{{ url_for('main.login') }}">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
-        <br>
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required>
-        <br>
         <button type="submit">Login</button>
     </form>
     <p>Don't have an account? <a href="{{ url_for('main.index', mode='register') }}">Register here</a>.</p>
+    <form method="GET" action="{{ url_for('main.index', mode='welcome') }}">
+        <button type="submit" class="back-button">Back to Welcome</button>
+    </form>
   
   {% elif mode == "register" %}
     <h1>Register</h1>
@@ -113,46 +200,32 @@
     <form method="POST" action="{{ url_for('main.register') }}">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
-        <br>
         <label for="name">Full Name:</label>
         <input type="text" id="name" name="name" required>
-        <br>
         <label for="email">Email Address:</label>
         <input type="email" id="email" name="email" required>
-        <br>
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required>
-        <br>
         <button type="submit">Register</button>
     </form>
     <p>Already have an account? <a href="{{ url_for('main.index', mode='login') }}">Login here</a>.</p>
+    <form method="GET" action="{{ url_for('main.index', mode='welcome') }}">
+        <button type="submit" class="back-button">Back to Welcome</button>
+    </form>
   
   {% elif mode == "menu" %}
     <h1>Menu</h1>
     <form method="POST" action="{{ url_for('main.menu_choice') }}">
         <label for="choice">Choose an option:</label>
+        <br>
         <select id="choice" name="choice">
             <option value="lookup">Lookup Addresses for Walkability</option>
             <option value="saved_searches">View Saved Searches</option>
             <option value="remove_saved_addresses">Remove Saved Addresses</option>
             <option value="logout">Logout</option>
         </select>
+        <br><br>
         <button type="submit">Submit</button>
-    </form>
-  
-  {% elif mode == "add" %}
-    <h1>Add a City</h1>
-    <form method="POST" action="{{ url_for('main.add_city') }}">
-        <label for="city_name">City Name:</label>
-        <input type="text" id="city_name" name="city_name" required>
-        <br>
-        <label for="walkability_score">Walkability Score:</label>
-        <input type="number" id="walkability_score" name="walkability_score" required>
-        <br>
-        <button type="submit">Add City</button>
-    </form>
-    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
-        <button type="submit" class="back-button">Back to Menu</button>
     </form>
   
   {% elif mode == "message" %}
@@ -164,13 +237,11 @@
   
   {% elif mode == "lookup" %}
     <h1>Lookup Address Walkability</h1>
-    <form method="POST" action="{{ url_for('main.protected_route') }}">
+    <form method="POST" action="{{ url_for('main.addresses_lookup') }}">
         <label for="street">Street:</label>
         <input type="text" id="street" name="street" required>
-        <br>
         <label for="city">City:</label>
         <input type="text" id="city" name="city" required>
-        <br>
         <label for="state">State:</label>
         <select id="state" name="state" required>
             <option value="">Select a State</option>
@@ -184,7 +255,7 @@
             <option value="DE">Delaware</option>
             <option value="FL">Florida</option>
             <option value="GA">Georgia</option>
-            <option value="HI">Hawaii</option>
+            <option value="""HI">Hawaii</option>
             <option value="ID">Idaho</option>
             <option value="IL">Illinois</option>
             <option value="IN">Indiana</option>
@@ -242,7 +313,52 @@
   
   {% elif mode == "saved_searches" %}
     <h1>Saved Searches</h1>
-    <form method="GET" action="{{ url_for('main.saved_searches') }}">
+    <form id="filterForm" method="GET" action="{{ url_for('main.saved_searches') }}">
+        <label for="state">Filter by State:</label>
+        <select id="state" name="state" onchange="document.getElementById('filterForm').submit();">
+            <option value="">All States</option>
+            {% for state in distinct_states %}
+                <option value="{{ state }}" {% if state_filter == state %}selected{% endif %}>{{ state }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="city">Filter by City:</label>
+        <select id="city" name="city" onchange="document.getElementById('filterForm').submit();">
+            <option value="">All Cities</option>
+            {% for city in distinct_cities %}
+                <option value="{{ city }}" {% if city_filter == city %}selected{% endif %}>{{ city }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    {% if searches %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Address</th>
+                    <th>Census Block</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for search in searches %}
+                    <tr>
+                        <td>{{ search.street }}, {{ search.city }}, {{ search.state }}</td>
+                        <td>{{ search.census_block }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No saved searches found.</p>
+    {% endif %}
+
+    <!-- Back to Menu Button -->
+    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
+        <button type="submit" class="back-button">Back to Menu</button>
+    </form>
+  {% elif mode == "remove_saved_addresses" %}
+    <h1>Remove Saved Addresses</h1>
+    <form method="GET" action="{{ url_for('main.remove_saved_addresses') }}">
         <label for="city">Filter by City:</label>
         <select id="city" name="city">
             <option value="">All Cities</option>
@@ -250,7 +366,7 @@
                 <option value="{{ city }}" {% if city_filter == city %}selected{% endif %}>{{ city }}</option>
             {% endfor %}
         </select>
-        <br>
+
         <label for="state">Filter by State:</label>
         <select id="state" name="state">
             <option value="">All States</option>
@@ -258,55 +374,23 @@
                 <option value="{{ state }}" {% if state_filter == state %}selected{% endif %}>{{ state }}</option>
             {% endfor %}
         </select>
-        <br>
-        <label for="sort_by">Sort By:</label>
-        <select id="sort_by" name="sort_by">
-            <option value="city" {% if sort_by == "city" %}selected{% endif %}>City</option>
-            <option value="state" {% if sort_by == "state" %}selected{% endif %}>State</option>
-        </select>
+
         <button type="submit">Apply Filters</button>
     </form>
 
-    {% if searches %}
+    <form method="POST" action="{{ url_for('main.remove_saved_addresses') }}">
         <ul>
-            {% for search in searches %}
+            {% for address in addresses %}
                 <li>
-                    <strong>Address:</strong> {{ search.street }}, {{ search.city }}, {{ search.state }}<br>
+                    <input type="checkbox" name="addresses" value="{{ address.street }}, {{ address.city }}, {{ address.state }}">
+                    <label>{{ address.street }}, {{ address.city }}, {{ address.state }}</label>
                 </li>
             {% endfor %}
         </ul>
-    {% else %}
-        <p>No saved searches found.</p>
-    {% endif %}
-    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
-        <button type="submit" class="back-button">Back to Menu</button>
-    </form>
-  
-  {% elif mode == "remove_saved_addresses" %}
-    <h1>Remove Saved Addresses</h1>
-    <form method="POST" action="{{ url_for('main.remove_saved_addresses') }}">
-        {% if searches %}
-            <ul>
-                {% for search in searches %}
-                    <li>
-                        <input type="checkbox" name="addresses" value="{{ search.street }}, {{ search.city }}, {{ search.state }}">
-                        <strong>Address:</strong> {{ search.street }}, {{ search.city }}, {{ search.state }}
-                    </li>
-                {% endfor %}
-            </ul>
-            <button type="submit">Delete Selected Addresses</button>
-        {% else %}
-            <p>No saved addresses found.</p>
-        {% endif %}
+        <button type="submit">Delete Selected Addresses</button>
     </form>
     <form method="get" action="{{ url_for('main.index', mode='menu') }}">
         <button type="submit" class="back-button">Back to Menu</button>
-    </form>
-  
-  {% else %}
-    <p class="message">{{ message }}</p>
-    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
-      <button type="submit" class="back-button">Back to Menu</button>
     </form>
   {% endif %}
   
