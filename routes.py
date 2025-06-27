@@ -181,7 +181,6 @@ def protected_route():
     Returns:
         str: Renders the index.html template with the lookup form, the result, or redirects to the menu.
     """
-    print("Session state in /protected_route:", session)  # Debugging log
     if request.method == "POST":
         street = request.form.get("street")
         city = request.form.get("city")
@@ -193,15 +192,14 @@ def protected_route():
 
         from get_census_block import get_block_group_geoid
         block_group = get_block_group_geoid(street, city, state)
-        # Construct the address from the form inputs
         try:
-            # Save the search details using the save_search function
             save_search(search_id=session.get('user_id'), street=street, city=city, state=state)
         except Exception as e:
             print(f"Error saving search: {str(e)}")
         return render_template("index.html", mode="block_result", block_group=block_group)
 
-    return redirect(url_for("main.index", mode="menu"))
+    # Render the lookup form
+    return render_template("index.html", mode="lookup")
 
 @main_bp.route("/lookup_city", methods=["GET", "POST"])
 @login_required
