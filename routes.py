@@ -1,14 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session
-from utils import login_required, create_user, validate_user_credentials
+from utils import login_required, create_user, validate_user_credentials, save_search, fetch_distinct_options, fetch_saved_searches
 
 # Define the blueprint for the main routes
 main_bp = Blueprint("main", __name__)
 
 # Menu options for the application
 MENU_OPTIONS = [
-    ("view", "View Walkable Cities"),
     ("login", "Log in User for Research"),
-    ("lookup", "Lookup Census Block Group from Address"),
+    ("lookup", "Lookup Address for Walkability"),
 ]
 
 # List to store cities and their walkability scores
@@ -63,6 +62,12 @@ def menu_choice():
 
     elif choice == "lookup":
         return render_template("index.html", menu=MENU_OPTIONS, mode="lookup", message=None)
+
+    elif choice == "saved_searches":
+        return redirect(url_for("main.saved_searches"))  # Redirect to the saved searches route
+
+    elif choice == "remove_saved_addresses":
+        return redirect(url_for("main.remove_saved_addresses"))  # Redirect to the remove saved addresses route
 
     elif choice == "logout":
         return redirect(url_for("main.logout"))
@@ -188,6 +193,12 @@ def protected_route():
 
         from get_census_block import get_block_group_geoid
         block_group = get_block_group_geoid(street, city, state)
+        # Construct the address from the form inputs
+        try:
+            # Save the search details using the save_search function
+            save_search(search_id=session.get('user_id'), street=street, city=city, state=state)
+        except Exception as e:
+            print(f"Error saving search: {str(e)}")
         return render_template("index.html", mode="block_result", block_group=block_group)
 
     return redirect(url_for("main.index", mode="menu"))
@@ -220,3 +231,103 @@ def lookup_city():
 
     print("Redirecting to menu")
     return redirect(url_for("main.index", mode="menu"))
+
+@main_bp.route("/saved_searches", methods=["GET"])
+@login_required
+def saved_searches():
+    """
+    Displays the saved searches for the logged-in user, with optional filtering and dropdown options.
+
+    Args:
+        None
+
+    Returns:
+        str: Renders the index.html template with the saved searches and dropdown options.
+    """
+    try:
+        user_id = session.get('user_id')  # Get the logged-in user's ID
+        if not user_id:
+            return redirect(url_for("main.index", mode="login"))  # Redirect to login if not authenticated
+
+        # Get filtering and sorting parameters from the query string
+        city_filter = request.args.get("city", None)
+        state_filter = request.args.get("state", None)
+        sort_by = request.args.get("sort_by", "city")  # Default sort by city
+
+        # Fetch saved searches for the user from the database
+        from utils import fetch_saved_searches, fetch_distinct_options
+        searches = fetch_saved_searches(user_id, city_filter, state_filter, sort_by)
+
+        # Fetch distinct cities and states for dropdown options
+        distinct_cities = fetch_distinct_options(user_id, "city")
+        distinct_states = fetch_distinct_options(user_id, "state")
+
+        return render_template(
+            "index.html",
+            mode="saved_searches",
+            searches=searches,
+            city_filter=city_filter,
+            state_filter=state_filter,
+            sort_by=sort_by,
+            distinct_cities=distinct_cities,
+            distinct_states=distinct_states,
+        )
+    except Exception as e:
+        print(f"Error fetching saved searches: {str(e)}")
+        message = "Unable to fetch saved searches."
+        return render_template("index.html", mode="message", message=message)
+
+@main_bp.route("/lookup", methods=["GET", "POST"])
+@login_required
+def lookup():
+    """
+    Handles the lookup form for walkability.
+
+    Args:
+        None
+
+    Returns:
+        str: Renders the index.html template with the lookup form.
+    """
+    us_states = [
+        "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA",
+        "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK",
+        "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
+    ]
+    return render_template("index.html", mode="lookup", us_states=us_states)
+
+@main_bp.route("/remove_saved_addresses", methods=["GET", "POST"])
+@login_required
+def remove_saved_addresses():
+    """
+    Displays saved addresses for the logged-in user and allows them to delete selected addresses.
+
+    Args:
+        None
+
+    Returns:
+        str: Renders the index.html template with the saved addresses and delete functionality.
+    """
+    try:
+        user_id = session.get('user_id')  # Get the logged-in user's ID
+        if not user_id:
+            return redirect(url_for("main.index", mode="login"))  # Redirect to login if not authenticated
+
+        # Fetch saved searches for the user
+        from utils import fetch_saved_searches
+        searches = fetch_saved_searches(user_id)
+
+        if request.method == "POST":
+            # Get the list of addresses to delete
+            addresses_to_delete = request.form.getlist("addresses")
+            from utils import delete_saved_addresses
+            delete_saved_addresses(user_id, addresses_to_delete)
+
+            # Refresh the list of saved searches after deletion
+            searches = fetch_saved_searches(user_id)
+
+        return render_template("index.html", mode="remove_saved_addresses", searches=searches)
+    except Exception as e:
+        print(f"Error removing saved addresses: {str(e)}")
+        message = "Unable to remove saved addresses."
+        return render_template("index.html", mode="message", message=message)

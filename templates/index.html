@@ -132,8 +132,9 @@
     <form method="POST" action="{{ url_for('main.menu_choice') }}">
         <label for="choice">Choose an option:</label>
         <select id="choice" name="choice">
-            <option value="view">View Walkable Cities</option>
-            <option value="lookup">Lookup Census Block Group</option>
+            <option value="lookup">Lookup Addresses for Walkability</option>
+            <option value="saved_searches">View Saved Searches</option>
+            <option value="remove_saved_addresses">Remove Saved Addresses</option>
             <option value="logout">Logout</option>
         </select>
         <button type="submit">Submit</button>
@@ -171,7 +172,12 @@
         <input type="text" id="city" name="city" required>
         <br>
         <label for="state">State:</label>
-        <input type="text" id="state" name="state" required>
+        <select id="state" name="state" required>
+            <option value="">Select a State</option>
+            {% for state in us_states %}
+                <option value="{{ state }}">{{ state }}</option>
+            {% endfor %}
+        </select>
         <br>
         <button type="submit">Submit</button>
     </form>
@@ -185,6 +191,69 @@
     {% endif %}
     <form method="get" action="{{ url_for('main.index', mode='menu') }}">
         <button type="submit">Back to Menu</button>
+    </form>
+  
+  {% elif mode == "saved_searches" %}
+    <h1>Saved Searches</h1>
+    <form method="GET" action="{{ url_for('main.saved_searches') }}">
+        <label for="city">Filter by City:</label>
+        <select id="city" name="city">
+            <option value="">All Cities</option>
+            {% for city in distinct_cities %}
+                <option value="{{ city }}" {% if city_filter == city %}selected{% endif %}>{{ city }}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <label for="state">Filter by State:</label>
+        <select id="state" name="state">
+            <option value="">All States</option>
+            {% for state in distinct_states %}
+                <option value="{{ state }}" {% if state_filter == state %}selected{% endif %}>{{ state }}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <label for="sort_by">Sort By:</label>
+        <select id="sort_by" name="sort_by">
+            <option value="city" {% if sort_by == "city" %}selected{% endif %}>City</option>
+            <option value="state" {% if sort_by == "state" %}selected{% endif %}>State</option>
+        </select>
+        <button type="submit">Apply Filters</button>
+    </form>
+
+    {% if searches %}
+        <ul>
+            {% for search in searches %}
+                <li>
+                    <strong>Address:</strong> {{ search.street }}, {{ search.city }}, {{ search.state }}<br>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No saved searches found.</p>
+    {% endif %}
+    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
+        <button type="submit" class="back-button">Back to Menu</button>
+    </form>
+  
+  {% elif mode == "remove_saved_addresses" %}
+    <h1>Remove Saved Addresses</h1>
+    <form method="POST" action="{{ url_for('main.remove_saved_addresses') }}">
+        {% if searches %}
+            <ul>
+                {% for search in searches %}
+                    <li>
+                        <input type="checkbox" name="addresses" value="{{ search.street }}, {{ search.city }}, {{ search.state }}">
+                        <strong>Address:</strong> {{ search.street }}, {{ search.city }}, {{ search.state }}
+                    </li>
+                {% endfor %}
+            </ul>
+            <button type="submit">Delete Selected Addresses</button>
+        {% else %}
+            <p>No saved addresses found.</p>
+        {% endif %}
+    </form>
+    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
+        <button type="submit" class="back-button">Back to Menu</button>
     </form>
   
   {% else %}
