@@ -121,12 +121,25 @@ def create_user(username: str, name: str, email: str, password: str):
         password (str): The plaintext password of the user.
 
     Returns:
-        bool: True if the user was created successfully, False otherwise.
+        dict: A dictionary containing the result of the operation.
+              Example: {"success": True, "user_id": 123} or {"success": False, "error": "Username already exists"}
     """
     hashed_password = hash_password(password)
     try:
         conn = mysql.connector.connect(user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD"), host='localhost', database=os.getenv("DB_NAME"))
         cursor = conn.cursor()
+
+        # Check if the username already exists
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = %s", (username,))
+        if cursor.fetchone()[0] > 0:
+            return {"success": False, "error": "The username already exists. Please choose a different username."}
+
+        # Check if the email already exists
+        cursor.execute("SELECT COUNT(*) FROM users WHERE email = %s", (email,))
+        if cursor.fetchone()[0] > 0:
+            return {"success": False, "error": "The email address is already registered. Please use a different email."}
+
+        # Insert the new user into the database
         sql_insert_query = """
         INSERT INTO users (username, name, email, password)
         VALUES (%s, %s, %s, %s)
@@ -140,13 +153,22 @@ def create_user(username: str, name: str, email: str, password: str):
         cursor.close()
         conn.close()
         print(f"User created with ID: {user_id}, Username: {username}, Name: {name}, Email: {email}")
-        return user_id
+        return {"success": True, "user_id": user_id}
+
+    except mysql.connector.IntegrityError as e:
+        # Handle database integrity errors (e.g., duplicate keys)
+        print(f"Database integrity error: {str(e)}")
+        return {"success": False, "error": "A database integrity error occurred. Please check your input."}
+
+    except mysql.connector.Error as e:
+        # Handle database-specific errors
+        print(f"Database error: {str(e)}")
+        return {"success": False, "error": f"Database error: {str(e)}"}
 
     except Exception as e:
-        print(f"Error creating user: {str(e)}")
-        print(f"error stack: Username: {username}, Name: {name}, Email: {email}")
-        return None
-
+        # Handle general errors
+        print(f"Unexpected error: {str(e)}")
+        return {"success": False, "error": f"Unexpected error: {str(e)}"}
 
 def hash_password(plain_password: str) -> bytes:
     """

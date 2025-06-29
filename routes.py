@@ -88,16 +88,24 @@ def register():
 
         try:
             # Use the create_user helper method to add the user to the database
-            user_id = create_user(username, name, email, password)
-            print(f"User created with ID: {user_id}, email:")
-            session['user_id'] = user_id  # Store the user ID in the session
-            name = grab_name(session.get("user_id"))
-            return redirect(url_for("main.index", mode="menu", name=name))
+            result = create_user(username, name, email, password)
+
+            if result["success"]:
+                print(f"User created with ID: {result['user_id']}, Username: {username}")
+                session['user_id'] = result["user_id"]  # Store the user ID in the session
+                name = grab_name(session.get("user_id"))
+                return redirect(url_for("main.index", mode="menu", name=name))
+            else:
+                # Handle specific error messages returned by create_user
+                message = result["error"]
+                return render_template("index.html", mode="register", message=message)
         except Exception as e:
-            message = f"Error creating user: {str(e)}"
+            # Handle unexpected exceptions
+            message = f"An unexpected error occurred during registration: {str(e)}"
             return render_template("index.html", mode="register", message=message)
 
-    return render_template("index.html", mode="register")
+    # Render the registration page for GET requests
+    return render_template("index.html", mode="register", message=None)
 
 @main_bp.route("/login", methods=["GET", "POST"])
 def login():
