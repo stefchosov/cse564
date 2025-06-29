@@ -20,10 +20,6 @@ def index():
     """
     mode = request.args.get("mode", "welcome")  # Default to "welcome" mode
 
-    # Debugging: Print session data and mode
-    print("Session Data:", session)
-    print("Mode:", mode)
-
     # Check if the user is logged in
     if 'user_id' in session and session['user_id'] is not None:
         if mode == "menu":  # Render the logged-in menu
@@ -128,7 +124,6 @@ def login():
             if user_id:
                 session['user_id'] = user_id  # Store the user ID in the session
                 name = grab_name(session.get("user_id"))
-                print(f"no, it in post name here: {name}")
                 return render_template("index.html", mode="menu", name=name)  # Redirect to the menu after successful login
             else:
                 message = "Invalid username or password."
@@ -137,7 +132,6 @@ def login():
             message = f"Error during login: {str(e)}"
             return render_template("index.html", mode="login", message=message)
     name = grab_name(session.get("user_id"))
-    print(f"name get here: {name}")
     return render_template("index.html", mode="login", name=name)
 
 
@@ -268,10 +262,14 @@ def remove_saved_addresses():
     city_filter = request.args.get("city", None)
     state_filter = request.args.get("state", None)
 
-    # Fetch saved addresses for the user with optional filtering
+    # Fetch filtered addresses for the user
     addresses = fetch_saved_addresses(user_id, city_filter, state_filter)
-    distinct_cities = fetch_distinct_options(user_id, "city")
-    distinct_states = fetch_distinct_options(user_id, "state")
+
+    # Fetch distinct states based on the selected city
+    distinct_states = fetch_distinct_options(user_id, "state", "city", city_filter)
+
+    # Fetch distinct cities based on the selected state
+    distinct_cities = fetch_distinct_options(user_id, "city", "state", state_filter)
 
     return render_template(
         "index.html",
