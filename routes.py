@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session
-from utils import login_required, create_user, validate_user_credentials, save_search, fetch_distinct_options, fetch_saved_addresses, delete_saved_addresses
+from utils import *
 
 # Define the blueprint for the main routes
 main_bp = Blueprint("main", __name__)
@@ -27,7 +27,7 @@ def index():
     # Check if the user is logged in
     if 'user_id' in session and session['user_id'] is not None:
         if mode == "menu":  # Render the logged-in menu
-            return render_template("index.html", mode="menu", message=None)
+            return render_template("index.html", mode="menu", message=None, name = grab_name(session.get("user_id")))
         elif mode == "welcome":  # Redirect to the menu if the user is authenticated
             return redirect(url_for("main.index", mode="menu"))
 
@@ -53,7 +53,6 @@ def menu_choice():
         str: Renders the appropriate template based on the user's menu choice.
     """
     choice = request.form.get("choice")
-
     if choice == "lookup":
         return render_template("index.html", mode="lookup", message=None)
 
@@ -90,8 +89,10 @@ def register():
         try:
             # Use the create_user helper method to add the user to the database
             user_id = create_user(username, name, email, password)
+            print(f"User created with ID: {user_id}, email:")
             session['user_id'] = user_id  # Store the user ID in the session
-            return redirect(url_for("main.index", mode="menu"))
+            name = grab_name(session.get("user_id"))
+            return redirect(url_for("main.index", mode="menu", name=name))
         except Exception as e:
             message = f"Error creating user: {str(e)}"
             return render_template("index.html", mode="register", message=message)
@@ -118,17 +119,21 @@ def login():
             user_id = validate_user_credentials(username, password)
             if user_id:
                 session['user_id'] = user_id  # Store the user ID in the session
-                return redirect(url_for("main.index", mode="menu"))  # Redirect to the menu after successful login
+                name = grab_name(session.get("user_id"))
+                print(f"no, it in post name here: {name}")
+                return render_template("index.html", mode="menu", name=name)  # Redirect to the menu after successful login
             else:
                 message = "Invalid username or password."
                 return render_template("index.html", mode="login", message=message)
         except Exception as e:
             message = f"Error during login: {str(e)}"
             return render_template("index.html", mode="login", message=message)
+    name = grab_name(session.get("user_id"))
+    print(f"name get here: {name}")
+    return render_template("index.html", mode="login", name=name)
 
-    return render_template("index.html", mode="login")
 
-@main_bp.route("/logout")
+@main_bp.route("/logout", methods=["GET"])
 def logout():
     """
     Handles user logout.
@@ -139,8 +144,12 @@ def logout():
     Returns:
         str: Redirects to the login page after clearing the session.
     """
-    session.pop('user_id', None)  # Remove the user ID from the session
-    return redirect(url_for("main.index", mode="login"))
+    if request.method == "GET":
+        # Clear the session to log out the user
+        session.pop('user_id', None)
+        session.clear()
+     # Remove the user ID from the session
+    return redirect(url_for("main.index", mode="welcome"))
 
 @main_bp.route("/addresses/lookup", methods=["GET", "POST"])
 def addresses_lookup():

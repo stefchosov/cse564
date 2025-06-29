@@ -87,7 +87,28 @@ def execute_query(query, params=None):
 
     return results
 
-    
+def grab_name(user_id):
+    """
+    Grabs name of user for menu
+
+    Args:
+        user_id (int): session id of the user
+
+    Returns:
+        String: Name of user
+    """
+    try:
+        sql_query = """
+        SELECT name FROM users WHERE id = %s
+        """
+        params = (user_id, )
+        # Use execute_query to fetch the user record
+        name = execute_query(sql_query, params)[0]['name']
+        return name
+    except Exception as e:
+        print(f"Error grabbing name: {str(e)}")
+        return None
+
 
 def create_user(username: str, name: str, email: str, password: str):
     """
@@ -103,20 +124,28 @@ def create_user(username: str, name: str, email: str, password: str):
         bool: True if the user was created successfully, False otherwise.
     """
     hashed_password = hash_password(password)
-
     try:
+        conn = mysql.connector.connect(user=os.getenv("DB_USER"), password=os.getenv("DB_PASSWORD"), host='localhost', database=os.getenv("DB_NAME"))
+        cursor = conn.cursor()
         sql_insert_query = """
         INSERT INTO users (username, name, email, password)
         VALUES (%s, %s, %s, %s)
         """
         params = (username, name, email, hashed_password)
 
-        # Use execute_query to insert the user
-        execute_query(sql_insert_query, params)
-        return True
+        cursor.execute(sql_insert_query, params)
+        conn.commit()
+
+        user_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+        print(f"User created with ID: {user_id}, Username: {username}, Name: {name}, Email: {email}")
+        return user_id
+
     except Exception as e:
         print(f"Error creating user: {str(e)}")
-        return False
+        print(f"error stack: Username: {username}, Name: {name}, Email: {email}")
+        return None
 
 
 def hash_password(plain_password: str) -> bytes:
@@ -151,7 +180,7 @@ def validate_user_credentials(username: str, password: str) -> int:
         sql_query = """
         SELECT id, password FROM users WHERE username = %s
         """
-        params = (username,)
+        params = (username, )
 
         # Use execute_query to fetch the user record
         results = execute_query(sql_query, params)

@@ -28,4 +28,4 @@ if __name__ == "__main__":
     """
     Entry point for running the Flask application.
     """
-    app.run(debug=True, host="0.0.0.0")  # Run the app in debug mode and listen on all interfaces
+    app.run(debug=True, host="0.0.0.0", port=5001)  # Run the app in debug mode and listen on all interfaces

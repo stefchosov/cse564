@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en"></html>
 <head>
     <meta charset="UTF-8" />
     <title>Walkdata Web</title>
@@ -155,6 +155,47 @@
         tr:hover {
             background-color: #f1f1f1;
         }
+
+        /* Style for the logout button */
+
+
+        .logout-button:hover {
+            background-color: #c0392b;
+        }
+
+        /* Position the logout button in the top-right corner */
+        .menu-form {
+            position: relative; /* Set the form as a relative container */
+        }
+
+        .logout-button {
+            position: absolute; /* Position the button absolutely within the form */
+            top: 30px; /* Align to the top */
+            right: 590px; /* Align to the right */
+            background-color: #e74c3c;
+            color: white;
+            padding: 10px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .logout-button:hover {
+            background-color: #c0392b;
+        }
+
+        .form-container {
+            display: flex; /* Use flexbox for layout */
+            flex-direction: column; /* Stack forms vertically */
+            /*align-items: stretch; /* Make forms take full width */
+            gap: 5px; /* Add spacing between forms */
+        }
+
+        .logout-form {
+            display: block; /* Use block layout */
+            justify-content: flex; /* Position the logout button on the right */
+        }
     </style>
 </head>
 <body>
@@ -215,6 +256,7 @@
   
   {% elif mode == "menu" %}
     <h1>Menu</h1>
+    <h2>Welcome, {{ name }}!</h2>
     <form method="POST" action="{{ url_for('main.menu_choice') }}">
         <label for="choice">Choose an option:</label>
         <br>
@@ -222,10 +264,13 @@
             <option value="lookup">Lookup Addresses for Walkability</option>
             <option value="saved_searches">View Saved Searches</option>
             <option value="remove_saved_addresses">Remove Saved Addresses</option>
-            <option value="logout">Logout</option>
         </select>
         <br><br>
         <button type="submit">Submit</button>
+    </form>
+    <!-- Logout Button -->
+    <form method="get" action="{{ url_for('main.logout') }}" class="logout-form">
+        <button type="submit" class="logout-button">Logout</button>
     </form>
   
   {% elif mode == "message" %}
@@ -336,7 +381,7 @@
             <thead>
                 <tr>
                     <th>Address</th>
-                    <th>Census Block</th>
+                    <th>Census</th>
                 </tr>
             </thead>
             <tbody>
@@ -358,24 +403,21 @@
     </form>
   {% elif mode == "remove_saved_addresses" %}
     <h1>Remove Saved Addresses</h1>
-    <form method="GET" action="{{ url_for('main.remove_saved_addresses') }}">
-        <label for="city">Filter by City:</label>
-        <select id="city" name="city">
-            <option value="">All Cities</option>
-            {% for city in distinct_cities %}
-                <option value="{{ city }}" {% if city_filter == city %}selected{% endif %}>{{ city }}</option>
-            {% endfor %}
-        </select>
-
+    <form id="filterForm" method="GET" action="{{ url_for('main.remove_saved_addresses') }}">
         <label for="state">Filter by State:</label>
-        <select id="state" name="state">
+        <select id="state" name="state" onchange="document.getElementById('filterForm').submit();">
             <option value="">All States</option>
             {% for state in distinct_states %}
                 <option value="{{ state }}" {% if state_filter == state %}selected{% endif %}>{{ state }}</option>
             {% endfor %}
         </select>
-
-        <button type="submit">Apply Filters</button>
+        <label for="city">Filter by City:</label>
+        <select id="city" name="city" onchange="document.getElementById('filterForm').submit();">
+            <option value="">All Cities</option>
+            {% for city in distinct_cities %}
+                <option value="{{ city }}" {% if city_filter == city %}selected{% endif %}>{{ city }}</option>
+            {% endfor %}
+        </select>
     </form>
 
     <form method="POST" action="{{ url_for('main.remove_saved_addresses') }}">

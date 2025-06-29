@@ -1,14 +1,14 @@
-name: Deploy to main VM
+name: Deploy to test VM
 
 on:
   push:
     branches:
-      - main
+      - test
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: main
+    environment: test
 
     env:
       DEPLOY_DIR: /app/program/
@@ -22,11 +22,11 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VM_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ vars.VM_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy Code to VM
         run: |
-            ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ vars.VM_HOST }} << 'EOF'
+            ssh -i ~/.ssh/deploy_key ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
             set -e
             DEPLOY_DIR="${{ env.DEPLOY_DIR }}"
             cd "$DEPLOY_DIR"
@@ -43,10 +43,10 @@ jobs:
             git clean -fd
             echo "Fetching origin..."
             git fetch origin
-            echo "Checking out branch main..."
-            git checkout main || git checkout -b main origin/main
+            echo "Checking out branch test..."
+            git checkout test || git checkout -b test origin/test
             echo "Pulling latest changes..."
-            git pull origin main
+            git pull origin test
             echo "Update complete."
             echo "Restarting web server..."
             sudo systemctl restart flaskapp.service
