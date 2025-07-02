@@ -173,15 +173,9 @@ def addresses_lookup():
             message = "Please fill all fields."
             return render_template("index.html", mode="lookup", message=message)
 
-        from get_census_block import get_block_group_geoid
-        block_group = get_block_group_geoid(street, city, state)
         user_id = session.get('user_id')
-        if (user_id):
-            try:
-                save_search(user_id, street, city, state, block_group)
-            except Exception as e:
-                print(f"Error saving search: {str(e)}")
-        return render_template("index.html", mode="block_result", block_group=block_group)
+        walkability=save_search(user_id, street, city, state)
+        return render_template("index.html", mode="walkability_display", walkability=walkability)
 
     # Render the lookup form
     return render_template("index.html", mode="lookup")

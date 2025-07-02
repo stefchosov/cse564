@@ -109,6 +109,32 @@ def grab_name(user_id):
         print(f"Error grabbing name: {str(e)}")
         return None
 
+def grab_walkability_values(census_block):
+    """
+    Grabs walkability values for the user based on census block.
+
+    Args:
+        user_id (int): The ID of the user.
+        census_block (str): The census block identifier.
+
+    Returns:
+        dict: A dictionary containing walkability values or an error message.
+    """
+    try:
+        sql_query = """
+        SELECT D2A_Ranked, D2B_Ranked, D3B_Ranked, D4A_Ranked, NatWalkInd FROM WalkabilityIndex WHERE census_block = %s
+        """
+        params = (census_block, )
+        results = execute_query(sql_query, params)
+
+        if results:
+            return results[0]  # Return the first result as a dictionary
+        else:
+            return {"error": "No walkability data found for the given census block."}
+
+    except Exception as e:
+        print(f"Error fetching walkability values: {str(e)}")
+        return {"error": f"An error occurred: {str(e)}"}
 
 def create_user(username: str, name: str, email: str, password: str):
     """
@@ -221,7 +247,7 @@ def validate_user_credentials(username: str, password: str) -> int:
         print(f"Error validating user credentials: {str(e)}")
         return None
 
-def save_search(user_id, street, city, state, census_block):
+def save_search(user_id, street, city, state):
     """
     Saves a search record for a user in the database.
 
@@ -237,7 +263,8 @@ def save_search(user_id, street, city, state, census_block):
     try:
         # Generate a unique search_id for the user
         new_search_id = generate_search_id(user_id)
-
+        from get_census_block import get_block_group_geoid
+        census_block = get_block_group_geoid(street, city, state)
         # Check if the search record already exists for the user
         query_exists = """
         SELECT COUNT(*) FROM searches WHERE user_id = %s AND street = %s AND city = %s AND state = %s AND census_block = %s
@@ -246,8 +273,11 @@ def save_search(user_id, street, city, state, census_block):
         exists = execute_query(query_exists, params_exists)[0]['COUNT(*)']
 
         if exists > 0:
-            print(f"Search with address {street, city, state} already exists for user {user_id}.")
-            return False
+            query = "SELECT w.NatWalkInd From WalkabilityIndex as w Join searches as s on s.census_block=w.census_block WHERE user_id = %s AND w.census_block = %s"
+            params = (user_id, census_block)
+            Walkability = execute_query(query, params)
+            print(Walkability)
+            return Walkability[0]['NatWalkInd']
 
         # Insert the new search record
         query_insert = """
@@ -258,7 +288,11 @@ def save_search(user_id, street, city, state, census_block):
         execute_query(query_insert, params_insert)
 
         print(f"Search {new_search_id} saved for user {user_id} with address {street, city, state}")
-        return True
+        query = "SELECT w.NatWalkInd From WalkabilityIndex as w Join searches as s on s.census_block=w.census_block WHERE user_id = %s AND w.census_block = %s"
+        params = (user_id, census_block)
+        Walkability = execute_query(query, params)
+        print(Walkability)
+        return Walkability[0]['NatWalkInd']
     except Exception as e:
         print(f"Error saving search: {str(e)}")
         return False
@@ -323,7 +357,8 @@ def fetch_saved_addresses(user_id, city_filter=None, state_filter=None, sort_by=
     Returns:
         list: A list of saved addresses.
     """
-    query = "SELECT street, city, state, census_block FROM searches WHERE user_id = %s"
+    #query = "SELECT street, city, state, census_block FROM searches WHERE user_id = %s"
+    query = "SELECT s.street, s.city, s.state, w.NatWalkInd From WalkabilityIndex as w Join searches as s on s.census_block=w.census_block WHERE user_id = %s"
     params = [user_id]
 
     if city_filter:

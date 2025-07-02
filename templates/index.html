@@ -169,7 +169,7 @@
         }
 
         .logout-button {
-            position: absolute; /* Position the button absolutely within the form */
+            position: flex; /* Position the button absolutely within the form */
             top: 30px; /* Align to the top */
             right: 590px; /* Align to the right */
             background-color: #e74c3c;
@@ -193,7 +193,7 @@
         }
 
         .logout-form {
-            display: block; /* Use block layout */
+            display: flex; /* Use block layout */
             justify-content: flex; /* Position the logout button on the right */
         }
     </style>
@@ -345,12 +345,12 @@
         <button type="submit">Submit</button>
     </form>
   
-  {% elif mode == "block_result" %}
-    <h1>Block Group Result</h1>
-    {% if block_group %}
-        <p>Block Group FIPS: {{ block_group }}</p>
+  {% elif mode == "walkability_display" %}
+    <h1>Walkability Index</h1>
+    {% if walkability %}
+        <p>{{ walkability }}</p>
     {% else %}
-        <p>Error: Unable to retrieve block group information.</p>
+        <p>Error: Unable to retrieve Walkability Index information.</p>
     {% endif %}
     <form method="get" action="{{ url_for('main.index', mode='menu') }}">
         <button type="submit">Back to Menu</button>
@@ -381,14 +381,14 @@
             <thead>
                 <tr>
                     <th>Address</th>
-                    <th>Census</th>
+                    <th>Walkability Index</th>
                 </tr>
             </thead>
             <tbody>
                 {% for search in searches %}
                     <tr>
                         <td>{{ search.street }}, {{ search.city }}, {{ search.state }}</td>
-                        <td>{{ search.census_block }}</td>
+                        <td>{{ search.NatWalkInd }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
