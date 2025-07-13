@@ -5,6 +5,7 @@ from mysql.connector import Error
 import bcrypt
 from functools import wraps
 from flask import session, redirect, url_for
+from get_census_block import *
 
 def login_required(f):
     """
@@ -18,7 +19,6 @@ def login_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        print("Checking session in login_required:", session)
         if 'user_id' not in session or session['user_id'] is None:
             # Redirect to login page if user is not authenticated
             return redirect(url_for('main.index', mode='login'))
@@ -109,6 +109,31 @@ def grab_name(user_id):
         print(f"Error grabbing name: {str(e)}")
         return None
 
+def get_walkability_values(census_block):
+    """
+    Grabs walkability values for the user based on census block.
+
+    Args:
+        user_id (int): The ID of the user.
+        census_block (str): The census block identifier.
+
+    Returns:
+        dict: A dictionary containing walkability values or an error message.
+    """
+    try:
+        sql_query = """
+        SELECT intersection_density, transit_access, job_housing_mix, population_employment_density, NatWalkInd FROM WalkabilityIndex WHERE census_block = %s
+        """
+        params = (census_block, )
+        results = execute_query(sql_query, params)
+        if results:
+            return results[0]  # Return the first result as a dictionary
+        else:
+            return {"error": "No walkability data found for the given census block."}
+
+    except Exception as e:
+        print(f"Error fetching walkability values: {str(e)}")
+        return {"error": f"An error occurred: {str(e)}"}
 
 def create_user(username: str, name: str, email: str, password: str):
     """
@@ -214,14 +239,12 @@ def validate_user_credentials(username: str, password: str) -> int:
             # Validate the provided password against the hashed password
             if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
                 return user_record["id"]  # Return the user ID if credentials are valid
-
-        print("Invalid username or password.")
         return None
     except Exception as e:
         print(f"Error validating user credentials: {str(e)}")
         return None
 
-def save_search(user_id, street, city, state, census_block):
+def save_search(user_id, street, city, state):
     """
     Saves a search record for a user in the database.
 
@@ -232,33 +255,38 @@ def save_search(user_id, street, city, state, census_block):
         state (str): The state name.
 
     Returns:
-        bool: True if the search was saved successfully, False otherwise.
+        Val or bool: Walkability index if the search was saved successfully, False otherwise.
     """
     try:
-        # Generate a unique search_id for the user
-        new_search_id = generate_search_id(user_id)
-
         # Check if the search record already exists for the user
         query_exists = """
-        SELECT COUNT(*) FROM searches WHERE user_id = %s AND street = %s AND city = %s AND state = %s AND census_block = %s
+        SELECT COUNT(*) FROM searches WHERE user_id = %s AND street = %s AND city = %s AND state = %s
         """
-        params_exists = (user_id, street, city, state, census_block)
+        params_exists = (user_id, street, city, state)
         exists = execute_query(query_exists, params_exists)[0]['COUNT(*)']
-
-        if exists > 0:
-            print(f"Search with address {street, city, state} already exists for user {user_id}.")
-            return False
-
-        # Insert the new search record
-        query_insert = """
-        INSERT INTO searches (user_id, search_id, street, city, state, census_block)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        census_block = get_block_group_geoid(street, city, state)
+        if not (isinstance(census_block, int) or (isinstance(census_block, str) and census_block.isdigit())):
+            return f"Error: Could not find census block for address {street, city, state}. Potentially an invalid address."
+        sql_query = """
+        SELECT intersection_density, transit_access, job_housing_mix, population_employment_density, NatWalkInd FROM WalkabilityIndex WHERE census_block = %s
         """
-        params_insert = (user_id, new_search_id, street, city, state, census_block)
-        execute_query(query_insert, params_insert)
-
-        print(f"Search {new_search_id} saved for user {user_id} with address {street, city, state}")
-        return True
+        params = (census_block, )
+        results = execute_query(sql_query, params)
+        if results:
+            # If the search does not exist, save it
+            # Get the census block for the address
+            if not exists:
+                new_search_id = generate_search_id(user_id)
+                query_insert = """
+                INSERT INTO searches (user_id, search_id, street, city, state, census_block)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                params_insert = (user_id, new_search_id, street, city, state, census_block)
+                execute_query(query_insert, params_insert)
+                print(f"Search {new_search_id} saved for user {user_id} with address {street, city, state}")
+            return results[0]  # Return the first result as a dictionary
+        else:
+            return "No walkability data found for the provided address."
     except Exception as e:
         print(f"Error saving search: {str(e)}")
         return False
@@ -282,7 +310,7 @@ def generate_search_id(user_id):
     else:
         return 1  # Start with ID 1 if the user has no searches
 
-def fetch_distinct_options(user_id, column, dependent_column=None, dependent_value=None):
+def get_distinct_options(user_id, column, dependent_column=None, dependent_value=None):
     """
     Fetch distinct values for a column (e.g., city or state) with optional dependent filtering.
 
@@ -310,7 +338,8 @@ def fetch_distinct_options(user_id, column, dependent_column=None, dependent_val
     # Extract values from the dictionaries
     return [row[column] for row in results]
 
-def fetch_saved_addresses(user_id, city_filter=None, state_filter=None, sort_by="city"):
+
+def get_saved_addresses(user_id, attribute, city_filter=None, state_filter=None, sort="DESC"):
     """
     Fetch saved addresses for a user with optional filtering and sorting.
 
@@ -323,7 +352,13 @@ def fetch_saved_addresses(user_id, city_filter=None, state_filter=None, sort_by=
     Returns:
         list: A list of saved addresses.
     """
-    query = "SELECT street, city, state, census_block FROM searches WHERE user_id = %s"
+    #query = "SELECT street, city, state, census_block FROM searches WHERE user_id = %s"
+    query = f"""
+        SELECT s.user_id, s.street, s.city, s.state, w.{attribute} as value
+        FROM WalkabilityIndex AS w
+        JOIN searches AS s ON s.census_block = w.census_block
+        WHERE s.user_id = %s
+    """    
     params = [user_id]
 
     if city_filter:
@@ -332,8 +367,12 @@ def fetch_saved_addresses(user_id, city_filter=None, state_filter=None, sort_by=
     if state_filter:
         query += " AND state = %s"
         params.append(state_filter)
+    if sort == "Low":
+        sort="ASC"
+    else:
+        sort="DESC"
 
-    query += f" ORDER BY {sort_by}, street"
+    query += f" ORDER BY w.{attribute} {sort}"
 
     # Use execute_query to fetch the addresses
     return execute_query(query, params)

@@ -14,7 +14,7 @@ def get_block_group_geoid(street, city, state):
     location = geolocator.geocode(address)
 
     if not location:
-        raise ValueError("Failed to geocode address.")
+        return "Census block not found for the given location."
 
     lat, lon = location.latitude, location.longitude
 
@@ -31,5 +31,5 @@ def get_block_group_geoid(street, city, state):
         block_group_geoid = block_geoid[:-3]  # Truncate to 12-digit block group
         return block_group_geoid
     except (KeyError, IndexError):
-        raise ValueError("Census block not found for the given location.")
+        return "Census block not found for the given location."
 
