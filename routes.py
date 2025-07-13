@@ -226,37 +226,7 @@ def saved_addresses():
     user_id = session.get('user_id')  # Get the logged-in user's ID
     if not user_id:
         return redirect(url_for("main.index", mode="login"))  # Redirect to login if not authenticated
-
-    if request.method == "POST":
-        # Handle address removal
-        selected_addresses = request.form.getlist("addresses")  # Get selected addresses
-        city_filter = request.args.get("city", "")
-        state_filter = request.args.get("state", "")
-        sorting = request.args.get("sorting", "High")
-        attribute_filter = request.args.get("attribute", "NatWalkInd")
-        distinct_states = get_distinct_options(user_id, "state", "city", city_filter)
-        # get distinct cities based on the selected state
-        distinct_cities = get_distinct_options(user_id, "city", "state", state_filter)
-        try:
-            from utils import delete_saved_addresses
-            delete_saved_addresses(user_id, selected_addresses)  # Remove selected addresses from the database
-            addresses = get_saved_addresses(user_id, attribute_filter, city_filter, state_filter, sorting)
-            return render_template(
-                                    "index.html",
-                                    mode="saved_addresses",
-                                    addresses=addresses,
-                                    distinct_cities=distinct_cities,
-                                    distinct_states=distinct_states,
-                                    city_filter=city_filter,
-                                    state_filter=state_filter,
-                                    sorting=sorting,
-                                    attribute_filter=attribute_filter
-                                )
-        except Exception as e:
-            message = f"Error removing addresses: {str(e)}"
-            return render_template("index.html", mode="message", message=message)
-
-    # Handle filtering
+        # Handle filtering
     city_filter = request.args.get("city", None)
     state_filter = request.args.get("state", None)
     sort = request.args.get("sorting")
@@ -269,6 +239,37 @@ def saved_addresses():
 
     # get distinct cities based on the selected state
     distinct_cities = get_distinct_options(user_id, "city", "state", state_filter)
+    print(city_filter, state_filter, sort, attribute_filter)
+    print("Request args:", request.args)  # For GET request query parameters
+    print("Request form:", request.form)  # For POST request form data
+    if request.method == "POST":
+        # Handle address removal
+        city_filter = request.form.get("city", None)
+        state_filter = request.form.get("state", None)
+        sort = request.form.get("sorting")
+        attribute_filter = request.form.get("attribute", "NatWalkInd")
+        try:
+            print("Request args:", request.args)  # For GET request query parameters
+            print("Request form:", request.form)  # For POST request form data
+            selected_addresses = request.form.getlist("addresses")
+            delete_saved_addresses(user_id, selected_addresses)  # Remove selected addresses from the database
+            addresses = get_saved_addresses(user_id, attribute_filter, city_filter, state_filter, sort)
+            print(city_filter, state_filter, sort, attribute_filter)
+            return render_template(
+                                    "index.html",
+                                    mode="saved_addresses",
+                                    addresses=addresses,
+                                    distinct_cities=distinct_cities,
+                                    distinct_states=distinct_states,
+                                    city_filter=city_filter,
+                                    state_filter=state_filter,
+                                    sorting=sort,
+                                    attribute_filter=attribute_filter
+                                )
+        except Exception as e:
+            message = f"Error removing addresses: {str(e)}"
+            return render_template("index.html", mode="message", message=message)
+
     return render_template(
         "index.html",
         mode="saved_addresses",

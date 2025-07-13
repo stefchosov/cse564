@@ -577,12 +577,18 @@
     </form>
 
     <form method="POST" action="{{ url_for('main.saved_addresses') }}">
+        <!-- Include hidden fields for the parameters -->
+        <input type="hidden" name="city" value="{{ city_filter }}">
+        <input type="hidden" name="state" value="{{ state_filter }}">
+        <input type="hidden" name="sorting" value="{{ sorting }}">
+        <input type="hidden" name="attribute" value="{{ attribute_filter }}">
+
         <table>
             <thead>
                 <tr>
                     <th>Select</th>
                     <th>Address</th>
-                    <th>{{attribute_filter}}</th>
+                    <th>{{ attribute_filter }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -597,7 +603,7 @@
                 {% endfor %}
             </tbody>
         </table>
-        <button type="submit">Remove Selected Addresses</button>
+        <button type="submit">Delete Selected Addresses</button>
     </form>
     <form method="GET" action="{{ url_for('main.index', mode='menu') }}">
         <button type="submit" class="back-button">Back to Menu</button>
