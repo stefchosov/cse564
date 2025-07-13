@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <title>Walkdata Web</title>
     <style>
+        :root {
+            --base-font-size: 18px; /* Set a base font size */
+            --button-padding: 1rem; /* Button padding relative to font size */
+            --button-font-size: 1.2rem; /* Button font size relative to base font size */
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f9f9f9;
@@ -11,51 +17,71 @@
             max-width: 600px;
             margin: 30px auto;
             padding: 20px;
-            box-shadow: 0 0 12px rgba(0,0,0,0.1);
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
             border-radius: 8px;
+            font-size: var(--base-font-size); /* Use the base font size */
         }
+
         h1, h2 {
             color: #2c3e50;
+            font-size: 2rem; /* Scale headings proportionally */
         }
+
         ul {
             list-style: none;
             padding-left: 0;
         }
+
         li {
             margin-bottom: 15px;
+            font-size: 1rem; /* Scale list items proportionally */
         }
+
         button {
             background-color: #3498db;
             border: none;
             color: white;
-            padding: 12px 20px;
+            padding: var(--button-padding); /* Use scalable padding */
             text-align: center;
-            font-size: 1rem;
+            font-size: var(--button-font-size); /* Use scalable font size */
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s ease;
             width: 100%;
-            max-width: 250px;
+            max-width: 300px; /* Scale button width */
         }
+
         button:hover {
             background-color: #2980b9;
         }
-        form {
-            margin-bottom: 20px;
-        }
-        label {
-            font-weight: 600;
-        }
-        input[type="text"],
-        input[type="number"],
-        input[type="password"] {
-            width: 100%;
-            padding: 8px 10px;
-            margin: 6px 0 15px 0;
+
+        input, select {
+            font-size: 1rem;
+            padding: 0.8rem;
+            border-radius: 5px;
             border: 1px solid #ccc;
-            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border: 1px solid #ddd;
             font-size: 1rem;
         }
+
+        th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+        }
+
         p.message {
             color: #2c3e50;
             background: #d1ecf1;
@@ -170,7 +196,12 @@
 
         /* Position the logout button in the top-right corner */
         .menu-form {
-            position: relative; /* Set the form as a relative container */
+            display: flex; /* Use Flexbox for layout */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            height: 100vh; /* Make the container take the full viewport height */
+            flex-direction: column; /* Stack items vertically */
+            gap: 20px; /* Add spacing between items */
         }
 
         .logout-button {
@@ -191,10 +222,12 @@
         }
 
         .form-container {
-            display: flex; /* Use flexbox for layout */
+            display: flex; /* Use Flexbox for layout */
             flex-direction: column; /* Stack forms vertically */
-            /*align-items: stretch; /* Make forms take full width */
-            gap: 5px; /* Add spacing between forms */
+            align-items: center; /* Center forms horizontally */
+            gap: 10px; /* Add spacing between forms */
+            margin: 0 auto; /* Center the container horizontally */
+            text-align: center; /* Center text inside the forms */
         }
 
         .logout-form {
