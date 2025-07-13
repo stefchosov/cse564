@@ -66,12 +66,17 @@
             max-width: 500px;
         }
         .back-button {
-            background-color: #7f8c8d;
-            margin-top: 10px;
-            max-width: 150px;
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 20px;
         }
         .back-button:hover {
-            background-color: #606b6f;
+            background-color: #2980b9;
         }
         form label {
             display: block; /* Make labels block-level */
@@ -196,6 +201,151 @@
             display: flex; /* Use block layout */
             justify-content: flex; /* Position the logout button on the right */
         }
+
+        .walkability-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .walkability-table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            font-family: Arial, sans-serif;
+        }
+
+        .walkability-table th, .walkability-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .walkability-table th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+        }
+
+        .walkability-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .walkability-table tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        /* Help Button Styling */
+        .help-button {
+            background-color: #b0b0b0; /* Light gray background */
+            color: white; /* White text */
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-right: 10px; /* Add spacing if needed */
+        }
+
+        .help-button:hover {
+            background-color: #8c8c8c; /* Darker gray on hover */
+        }
+
+        .slightly-bold {
+        font-weight: 599; /* Medium weight for slightly bold text */
+        }
+        /* Modal Styling */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5); /* Black background with opacity */
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h2 {
+            margin-top: 0;
+        }
+
+        .modal-content ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .modal-content li {
+            margin-bottom: 10px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+        }
+
+        .progress-layout {
+            margin: 20px auto;
+            max-width: 600px;
+        }
+
+        .progress-item {
+            margin-bottom: 15px;
+        }
+
+        .progress-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .progress-bar-container {
+            position: relative;
+            height: 20px;
+            border-radius: 5px;
+            background-color: #ddd;
+        }
+
+        .ticks {
+            position: absolute;
+            top: 100%; /* Position the ticks just below the progress bar */
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 0.8rem;
+            color: #555;
+            pointer-events: none; /* Prevent interaction with ticks */
+        }
+
+        .progress-bar {
+            height: 20px;
+            border-radius: 5px;
+        }
+
+        .score-label {
+            margin-left: 10px;
+            font-weight: bold;
+            color: #555;
+        }
     </style>
 </head>
 <body>
@@ -262,14 +412,13 @@
         <br>
         <select id="choice" name="choice">
             <option value="lookup">Lookup Addresses for Walkability</option>
-            <option value="saved_searches">View Saved Searches</option>
-            <option value="remove_saved_addresses">Remove Saved Addresses</option>
+            <option value="saved_searches">View Searched Addresses</option>
         </select>
         <br><br>
         <button type="submit">Submit</button>
     </form>
     <!-- Logout Button -->
-    <form method="get" action="{{ url_for('main.logout') }}" class="logout-form">
+    <form method="GET" action="{{ url_for('main.logout') }}" class="logout-form">
         <button type="submit" class="logout-button">Logout</button>
     </form>
   
@@ -281,6 +430,9 @@
     </form>
   
   {% elif mode == "lookup" %}
+    {% if message %}
+    <p style="color: red;">{{ message }}</p>
+    {% endif %}
     <h1>Lookup Address Walkability</h1>
     <form method="POST" action="{{ url_for('main.addresses_lookup') }}">
         <label for="street">Street:</label>
@@ -344,21 +496,56 @@
         <br><br>
         <button type="submit">Submit</button>
     </form>
-  
-  {% elif mode == "walkability_display" %}
-    <h1>Walkability Index</h1>
-    {% if walkability %}
-        <p>{{ walkability }}</p>
+    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
+        <button type="submit" class="back-button">Back to Menu</button>
+    </form>
+    {% elif mode == "walkability_display" %}
+        {% if walkability %}
+        <div class="walkability-container">
+            <h1>Walkability Index for</h1>
+            <h3>{{ street }}, {{ city }}, {{ state }}</h3>
+            <div class="progress-layout">
+                {% for item in walkability %}
+                    <div class="progress-item">
+                        <label>{{ item.attribute }}</label>
+                        <div class="progress-bar-container">
+                            <!-- Ticks -->
+                            <div class="ticks">
+                                <span>0</span>
+                                <span>100</span>
+                            </div>
+                            <!-- Progress Bar -->
+                            <div class="progress-bar" style="background-color: {{ item.background_color }}; width: {{ item.score }}%;"></div>
+                        </div>
+                        <span class="score-label">{{ item.score }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="help-button" onclick="openHelpModal()">What does each attribute mean?</button>
+        </div>
+        <!-- Help Modal -->
+        <div id="helpModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeHelpModal()">&times;</span>
+                <h2>Walkability Attribute Descriptions</h2>
+                <ul>
+                    <li><strong>Intersection Density:</strong> Measures the street network connectivity (intersections per sq mile), more intersections mean more route options and better walkability.</li>
+                    <li><strong>Transit Access:</strong> Evaluates the proximity to public transit stops and service frequency. This encourages walking by improving access to transit.</li>
+                    <li><strong>Job-Housing Mix:</strong> Assesses the balance between jobs and households in the area. This supports mixed-use areas where people can live and work locally.</li>
+                    <li><strong>Population Employment Density:</strong> Measures the density of people and jobs in an area. Higher density supports walking and access to amenities.</li>
+                    <li><strong>Overall Walkability:</strong> Overall Score from the aggregate of each attribute.</li>
+                </ul>
+            </div>
+        </div>
     {% else %}
         <p>Error: Unable to retrieve Walkability Index information.</p>
     {% endif %}
     <form method="get" action="{{ url_for('main.index', mode='menu') }}">
-        <button type="submit">Back to Menu</button>
+        <button type="submit" class="back-button">Back to Menu</button>
     </form>
-  
-  {% elif mode == "saved_searches" %}
-    <h1>Saved Searches</h1>
-    <form id="filterForm" method="GET" action="{{ url_for('main.saved_searches') }}">
+  {% elif mode == "saved_addresses" %}
+    <h1>Saved Addresses</h1>
+    <form id="filterForm" method="GET" action="{{ url_for('main.saved_addresses') }}">
         <label for="state">Filter by State:</label>
         <select id="state" name="state" onchange="document.getElementById('filterForm').submit();">
             <option value="">All States</option>
@@ -366,7 +553,6 @@
                 <option value="{{ state }}" {% if state_filter == state %}selected{% endif %}>{{ state }}</option>
             {% endfor %}
         </select>
-
         <label for="city">Filter by City:</label>
         <select id="city" name="city" onchange="document.getElementById('filterForm').submit();">
             <option value="">All Cities</option>
@@ -374,67 +560,68 @@
                 <option value="{{ city }}" {% if city_filter == city %}selected{% endif %}>{{ city }}</option>
             {% endfor %}
         </select>
+        <label for="attribute">Search by Attribute:</label>
+        <select id="attribute" name="attribute" onchange="document.getElementById('filterForm').submit();">
+            <option value="NatWalkInd" {% if attribute_filter == "NatWalkInd" %}selected{% endif %}>Overall Score</option>
+            <option value="intersection_density" {% if attribute_filter == "intersection_density" %}selected{% endif %}>Intersection Density</option>
+            <option value="transit_access" {% if attribute_filter == "transit_access" %}selected{% endif %}>Transit Access</option>
+            <option value="job_housing_mix" {% if attribute_filter == "job_housing_mix" %}selected{% endif %}>Job-Housing Mix</option>
+            <option value="population_employment_density" {% if attribute_filter == "population_employment_density" %}selected{% endif %}>Population Employment Density</option>
+        </select>
+        <br>
+        <label for="sorting">Sort Scores:</label>
+        <select id="sorting" name="sorting" onchange="document.getElementById('filterForm').submit();">
+            <option value="High" {% if sorting == "High" %}selected{% endif %}>High to Low</option>
+            <option value="Low" {% if sorting == "Low" %}selected{% endif %}>Low to High</option>
+        </select>
     </form>
 
-    {% if searches %}
+    <form method="POST" action="{{ url_for('main.saved_addresses') }}">
         <table>
             <thead>
                 <tr>
+                    <th>Select</th>
                     <th>Address</th>
-                    <th>Walkability Index</th>
+                    <th>{{attribute_filter}}</th>
                 </tr>
             </thead>
             <tbody>
-                {% for search in searches %}
+                {% for address in addresses %}
                     <tr>
-                        <td>{{ search.street }}, {{ search.city }}, {{ search.state }}</td>
-                        <td>{{ search.NatWalkInd }}</td>
+                        <td>
+                            <input type="checkbox" name="addresses" value="{{ address.street }}, {{ address.city }}, {{ address.state }}">
+                        </td>
+                        <td>{{ address.street }}, {{ address.city }}, {{ address.state }}</td>
+                        <td>{{ address.value }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
-    {% else %}
-        <p>No saved searches found.</p>
-    {% endif %}
-
-    <!-- Back to Menu Button -->
-    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
-        <button type="submit" class="back-button">Back to Menu</button>
+        <button type="submit">Remove Selected Addresses</button>
     </form>
-  {% elif mode == "remove_saved_addresses" %}
-    <h1>Remove Saved Addresses</h1>
-    <form id="filterForm" method="GET" action="{{ url_for('main.remove_saved_addresses') }}">
-        <label for="state">Filter by State:</label>
-        <select id="state" name="state" onchange="document.getElementById('filterForm').submit();">
-            <option value="">All States</option>
-            {% for state in distinct_states %}
-                <option value="{{ state }}" {% if state_filter == state %}selected{% endif %}>{{ state }}</option>
-            {% endfor %}
-        </select>
-        <label for="city">Filter by City:</label>
-        <select id="city" name="city" onchange="document.getElementById('filterForm').submit();">
-            <option value="">All Cities</option>
-            {% for city in distinct_cities %}
-                <option value="{{ city }}" {% if city_filter == city %}selected{% endif %}>{{ city }}</option>
-            {% endfor %}
-        </select>
-    </form>
-
-    <form method="POST" action="{{ url_for('main.remove_saved_addresses') }}">
-        <ul>
-            {% for address in addresses %}
-                <li>
-                    <input type="checkbox" name="addresses" value="{{ address.street }}, {{ address.city }}, {{ address.state }}">
-                    <label>{{ address.street }}, {{ address.city }}, {{ address.state }}</label>
-                </li>
-            {% endfor %}
-        </ul>
-        <button type="submit">Delete Selected Addresses</button>
-    </form>
-    <form method="get" action="{{ url_for('main.index', mode='menu') }}">
+    <form method="GET" action="{{ url_for('main.index', mode='menu') }}">
         <button type="submit" class="back-button">Back to Menu</button>
     </form>
   {% endif %}
   
+  <script>
+    // Open the modal
+    function openHelpModal() {
+        document.getElementById("helpModal").style.display = "block";
+    }
+
+    // Close the modal
+    function closeHelpModal() {
+        document.getElementById("helpModal").style.display = "none";
+    }
+
+    // Close the modal when clicking outside of it
+    window.onclick = function(event) {
+        const modal = document.getElementById("helpModal");
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
+    }
+  </script>
   </body>
   </html>
