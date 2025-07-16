@@ -284,7 +284,6 @@ def save_search(user_id, street, city, state):
                 """
                 params_insert = (user_id, new_search_id, street, city, state, census_block)
                 execute_query(query_insert, params_insert)
-                print(f"Search {new_search_id} saved for user {user_id} with address {street, city, state}")
             return results[0]  # Return the first result as a dictionary
         else:
             return "No walkability data found for the provided address."
