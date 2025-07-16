@@ -257,6 +257,7 @@ def save_search(user_id, street, city, state):
     Returns:
         Val or bool: Walkability index if the search was saved successfully, False otherwise.
     """
+    census_block = get_block_group_geoid(street, city, state)
     try:
         # Check if the search record already exists for the user
         query_exists = """
@@ -264,7 +265,6 @@ def save_search(user_id, street, city, state):
         """
         params_exists = (user_id, street, city, state)
         exists = execute_query(query_exists, params_exists)[0]['COUNT(*)']
-        census_block = get_block_group_geoid(street, city, state)
         if not (isinstance(census_block, int) or (isinstance(census_block, str) and census_block.isdigit())):
             return f"Error: Could not find census block for address {street, city, state}. Potentially an invalid address."
         sql_query = """
@@ -275,7 +275,8 @@ def save_search(user_id, street, city, state):
         if results:
             # If the search does not exist, save it
             # Get the census block for the address
-            if not exists:
+            if not exists and user_id is not None:
+                # Generate a new search ID for the user
                 new_search_id = generate_search_id(user_id)
                 query_insert = """
                 INSERT INTO searches (user_id, search_id, street, city, state, census_block)

@@ -239,9 +239,6 @@ def saved_addresses():
 
     # get distinct cities based on the selected state
     distinct_cities = get_distinct_options(user_id, "city", "state", state_filter)
-    print(city_filter, state_filter, sort, attribute_filter)
-    print("Request args:", request.args)  # For GET request query parameters
-    print("Request form:", request.form)  # For POST request form data
     if request.method == "POST":
         # Handle address removal
         city_filter = request.form.get("city", None)
@@ -249,12 +246,9 @@ def saved_addresses():
         sort = request.form.get("sorting")
         attribute_filter = request.form.get("attribute", "NatWalkInd")
         try:
-            print("Request args:", request.args)  # For GET request query parameters
-            print("Request form:", request.form)  # For POST request form data
             selected_addresses = request.form.getlist("addresses")
             delete_saved_addresses(user_id, selected_addresses)  # Remove selected addresses from the database
             addresses = get_saved_addresses(user_id, attribute_filter, city_filter, state_filter, sort)
-            print(city_filter, state_filter, sort, attribute_filter)
             return render_template(
                                     "index.html",
                                     mode="saved_addresses",
