@@ -89,7 +89,7 @@ def execute_query(query, params=None):
 
 def grab_name(user_id):
     """
-    Grabs name of user for menu
+    Grabs name of user for menu using a stored procedure.
 
     Args:
         user_id (int): session id of the user
@@ -98,15 +98,35 @@ def grab_name(user_id):
         String: Name of user
     """
     try:
-        sql_query = """
-        SELECT name FROM users WHERE id = %s
-        """
-        params = (user_id, )
-        # Use execute_query to fetch the user record
-        name = execute_query(sql_query, params)[0]['name']
-        return name
-    except Exception as e:
-        print(f"Error grabbing name: {str(e)}")
+        # Load environment variables from .env file
+        load_dotenv()
+        host_val = os.getenv("DB_HOST")
+        user_val = os.getenv("DB_USER")
+        password_val = os.getenv("DB_PASSWORD")
+        database_val = os.getenv("DB_NAME")
+
+        # Establish database connection
+        connection = mysql.connector.connect(
+            host=host_val,
+            user=user_val,
+            password=password_val,
+            database=database_val
+        )
+        cursor = connection.cursor(dictionary=True)  # Use dictionary=True for row results as dicts
+
+        # Call the stored procedure directly
+        cursor.callproc('GetUserName', [user_id])
+
+        for result in cursor.stored_results():
+         rows = result.fetchall()
+        print(rows)
+        # Close the cursor and connection
+        cursor.close()
+        connection.close()
+
+        return rows[0]['name'] if rows else None
+    except Error as e:
+        print(f"Error fetching user name: {str(e)}")
         return None
 
 def get_walkability_values(census_block):
@@ -165,16 +185,14 @@ def create_user(username: str, name: str, email: str, password: str):
             return {"success": False, "error": "The email address is already registered. Please use a different email."}
 
         # Insert the new user into the database
-        sql_insert_query = """
-        INSERT INTO users (username, name, email, password)
-        VALUES (%s, %s, %s, %s)
-        """
-        params = (username, name, email, hashed_password)
-
-        cursor.execute(sql_insert_query, params)
+        # Call the stored procedure
+        cursor.callproc('AddUser', [username, name, email, hashed_password])
         conn.commit()
+        # Fetch the last inserted ID
+        cursor.execute("SELECT LAST_INSERT_ID()")
+        user_id = cursor.fetchone()[0]
 
-        user_id = cursor.lastrowid
+        # Close the cursor and connection
         cursor.close()
         conn.close()
         print(f"User created with ID: {user_id}, Username: {username}, Name: {name}, Email: {email}")
@@ -223,22 +241,27 @@ def validate_user_credentials(username: str, password: str) -> int:
         int: The user ID if the credentials are valid, or None if invalid.
     """
     try:
-        # Query to fetch the user record based on the username
-        sql_query = """
-        SELECT id, password FROM users WHERE username = %s
-        """
-        params = (username, )
+        load_dotenv()
+        host_val = os.getenv("DB_HOST")
+        user_val = os.getenv("DB_USER")
+        password_val = os.getenv("DB_PASSWORD")
+        database_val = os.getenv("DB_NAME")
+        # Establish connection to the database
+        connection = mysql.connector.connect(
+            host=host_val,
+            user=user_val,
+            password=password_val,
+            database=database_val
+        )
+        cursor = connection.cursor(dictionary=True)
+        cursor.callproc('GetUserCredentials', [username])
 
-        # Use execute_query to fetch the user record
-        results = execute_query(sql_query, params)
-
-        if results:
-            user_record = results[0]
-            hashed_password = user_record["password"]
-
-            # Validate the provided password against the hashed password
-            if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
-                return user_record["id"]  # Return the user ID if credentials are valid
+        for result in cursor.stored_results():
+            user_record = result.fetchone()
+            if user_record:
+                hashed_password = user_record["password"]
+                if bcrypt.checkpw(password.encode('utf-8'), hashed_password.encode('utf-8')):
+                    return user_record["id"]
         return None
     except Exception as e:
         print(f"Error validating user credentials: {str(e)}")
@@ -278,12 +301,27 @@ def save_search(user_id, street, city, state):
             if not exists and user_id is not None:
                 # Generate a new search ID for the user
                 new_search_id = generate_search_id(user_id)
-                query_insert = """
-                INSERT INTO searches (user_id, search_id, street, city, state, census_block)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """
-                params_insert = (user_id, new_search_id, street, city, state, census_block)
-                execute_query(query_insert, params_insert)
+                try:
+                    load_dotenv()
+                    host_val = os.getenv("DB_HOST")
+                    user_val = os.getenv("DB_USER")
+                    password_val = os.getenv("DB_PASSWORD")
+                    database_val = os.getenv("DB_NAME")
+                    # Establish connection to the database
+                    connection = mysql.connector.connect(
+                        host=host_val,
+                        user=user_val,
+                        password=password_val,
+                        database=database_val
+                    )
+                    cursor = connection.cursor(dictionary=True)
+                    cursor.callproc('SaveSearch', [user_id, new_search_id, street, city, state, census_block])
+                    connection.commit()
+                    cursor.close()
+                    connection.close()
+                except Exception as e:
+                    print(f"Error inserting search user credentials: {str(e)}")
+                    return None
             return results[0]  # Return the first result as a dictionary
         else:
             return "No walkability data found for the provided address."
@@ -360,11 +398,10 @@ def get_saved_addresses(user_id, attribute, city_filter=None, state_filter=None,
         WHERE s.user_id = %s
     """    
     params = [user_id]
-
-    if city_filter:
+    if city_filter is not None:
         query += " AND city = %s"
         params.append(city_filter)
-    if state_filter:
+    if state_filter is not None:
         query += " AND state = %s"
         params.append(state_filter)
     if sort == "Low":
@@ -375,7 +412,8 @@ def get_saved_addresses(user_id, attribute, city_filter=None, state_filter=None,
     query += f" ORDER BY w.{attribute} {sort}"
 
     # Use execute_query to fetch the addresses
-    return execute_query(query, params)
+    quer = execute_query(query, params)
+    return quer
 
 def delete_saved_addresses(user_id, addresses):
     """
@@ -391,12 +429,27 @@ def delete_saved_addresses(user_id, addresses):
     try:
         for address in addresses:
             street, city, state = address.split(", ")
-            query = "DELETE FROM searches WHERE user_id = %s AND street = %s AND city = %s AND state = %s"
-            params = (user_id, street, city, state)
-
-            # Use execute_query to delete the address
-            execute_query(query, params)
-
+            try:
+                load_dotenv()
+                host_val = os.getenv("DB_HOST")
+                user_val = os.getenv("DB_USER")
+                password_val = os.getenv("DB_PASSWORD")
+                database_val = os.getenv("DB_NAME")
+                # Establish connection to the database
+                connection = mysql.connector.connect(
+                    host=host_val,
+                    user=user_val,
+                    password=password_val,
+                    database=database_val
+                )
+                cursor = connection.cursor(dictionary=True)
+                cursor.callproc('DeleteSavedAddress', [user_id, street, city, state])
+                connection.commit()
+                cursor.close()
+                connection.close()
+            except Exception as e:
+                print(f"Error inserting search user credentials: {str(e)}")
+                return None
         print(f"Deleted addresses: {addresses}")
     except Exception as e:
         print(f"Error deleting saved addresses: {str(e)}")

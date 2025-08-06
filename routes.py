@@ -229,6 +229,10 @@ def saved_addresses():
         # Handle filtering
     city_filter = request.args.get("city", None)
     state_filter = request.args.get("state", None)
+    if city_filter == "" or city_filter == "None":
+        city_filter = None
+    if state_filter == "" or state_filter == "None":
+        state_filter = None
     sort = request.args.get("sorting")
     attribute_filter = request.args.get("attribute", "NatWalkInd")
     # get filtered addresses for the user
@@ -248,7 +252,16 @@ def saved_addresses():
         try:
             selected_addresses = request.form.getlist("addresses")
             delete_saved_addresses(user_id, selected_addresses)  # Remove selected addresses from the database
+            city_filter = request.args.get("city", None)
+            state_filter = request.args.get("state", None)
+            # Normalize values
+            if city_filter == "" or city_filter == "None":
+                city_filter = None
+            if state_filter == "" or state_filter == "None":
+                state_filter = None
+            print(user_id, attribute_filter, city_filter, state_filter, sort)
             addresses = get_saved_addresses(user_id, attribute_filter, city_filter, state_filter, sort)
+            print(addresses, user_id, attribute_filter, city_filter, state_filter, sort)
             return render_template(
                                     "index.html",
                                     mode="saved_addresses",
