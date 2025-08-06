@@ -85,10 +85,29 @@ def execute_query(query, params=None):
     cursor.close()
     connection.close()
     import logging
+    import os
+
+    # Ensure logs directory exists
+    os.makedirs("/app/logs", exist_ok=True)
+
+    # Create a custom logger
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
-    # Basic setup if not already configured
-    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
+
+    # Prevent duplicate logs if reloaded
+    if not logger.handlers:
+        # Create file handler
+        file_handler = logging.FileHandler("/app/logs/app.log")
+        file_handler.setLevel(logging.INFO)
+
+        # Create formatter and add to handler
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+
+        # Add handler to logger
+        logger.addHandler(file_handler)
+
+    # Now logging will work
     logger.info(f"Executed query: {query} with params: {params}")
     return results
 
