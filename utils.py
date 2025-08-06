@@ -84,7 +84,12 @@ def execute_query(query, params=None):
     # Close the cursor and connection
     cursor.close()
     connection.close()
-    print(f"Executed query: {query} with params: {params}")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    # Basic setup if not already configured
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s')
+    logger.info(f"Executed query: {query} with params: {params}")
     return results
 
 def grab_name(user_id):
