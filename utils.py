@@ -84,7 +84,7 @@ def execute_query(query, params=None):
     # Close the cursor and connection
     cursor.close()
     connection.close()
-
+    print(f"Executed query: {query} with params: {params}")
     return results
 
 def grab_name(user_id):
@@ -410,7 +410,6 @@ def get_saved_addresses(user_id, attribute, city_filter=None, state_filter=None,
         sort="DESC"
 
     query += f" ORDER BY w.{attribute} {sort}"
-
     # Use execute_query to fetch the addresses
     quer = execute_query(query, params)
     return quer
