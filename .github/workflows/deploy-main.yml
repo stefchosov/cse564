@@ -44,7 +44,7 @@ jobs:
             echo "Fetching origin..."
             git fetch origin
             echo "Checking out branch test..."
-            git checkout test || git checkout -b test origin/test
+            git checkout main || git checkout -b main origin/main
             echo "Pulling latest changes..."
             git pull origin test
             echo "Update complete."
