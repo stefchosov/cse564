@@ -43,10 +43,10 @@ jobs:
             git clean -fd
             echo "Fetching origin..."
             git fetch origin
-            echo "Checking out branch test..."
+            echo "Checking out branch main..."
             git checkout main || git checkout -b main origin/main
             echo "Pulling latest changes..."
-            git pull origin test
+            git pull origin main
             echo "Update complete."
             echo "Restarting web server..."
             sudo systemctl restart flaskapp.service
