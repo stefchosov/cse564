@@ -84,6 +84,7 @@ def execute_query(query, params=None):
     # Close the cursor and connection
     cursor.close()
     connection.close()
+    print(f"Executed query: {query} with params: {params if params else 'None'}")
     return results
 
 def grab_name(user_id):

@@ -245,15 +245,14 @@ def saved_addresses():
     distinct_cities = get_distinct_options(user_id, "city", "state", state_filter)
     if request.method == "POST":
         # Handle address removal
-        city_filter = request.form.get("city", None)
-        state_filter = request.form.get("state", None)
+
         sort = request.form.get("sorting")
         attribute_filter = request.form.get("attribute", "NatWalkInd")
         try:
             selected_addresses = request.form.getlist("addresses")
             delete_saved_addresses(user_id, selected_addresses)  # Remove selected addresses from the database
-            city_filter = request.args.get("city", None)
-            state_filter = request.args.get("state", None)
+            city_filter = request.form.get("city", None)
+            state_filter = request.form.get("state", None)
             # Normalize values
             if city_filter == "" or city_filter == "None":
                 city_filter = None
