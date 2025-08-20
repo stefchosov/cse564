@@ -290,6 +290,10 @@ def save_search(user_id, street, city, state):
         exists = execute_query(query_exists, params_exists)[0]['COUNT(*)']
         if not (isinstance(census_block, int) or (isinstance(census_block, str) and census_block.isdigit())):
             return f"Error: Could not find census block for address {street, city, state}. Potentially an invalid address."
+        meta_data_query = """
+
+        """
+
         sql_query = """
         SELECT intersection_density, transit_access, job_housing_mix, population_employment_density, NatWalkInd FROM WalkabilityIndex WHERE census_block = %s
         """
@@ -316,6 +320,14 @@ def save_search(user_id, street, city, state):
                     )
                     cursor = connection.cursor(dictionary=True)
                     cursor.callproc('SaveSearch', [user_id, new_search_id, street, city, state, census_block])
+                    # Update metadata
+                    meta_data_query = """
+                    INSERT INTO meta_data (street, city, state, search_count)
+                    VALUES (%s, %s, %s, 1)
+                    ON DUPLICATE KEY UPDATE search_count = search_count + 1
+                    """
+                    meta_data_params = (street, city, state)
+                    cursor.execute(meta_data_query, meta_data_params)
                     connection.commit()
                     cursor.close()
                     connection.close()
@@ -443,6 +455,14 @@ def delete_saved_addresses(user_id, addresses):
                 )
                 cursor = connection.cursor(dictionary=True)
                 cursor.callproc('DeleteSavedAddress', [user_id, street, city, state])
+                # Update metadata to increment delete_count
+                meta_data_query = """
+                INSERT INTO meta_data (street, city, state, delete_count)
+                VALUES (%s, %s, %s, 1)
+                ON DUPLICATE KEY UPDATE delete_count = delete_count + 1
+                """
+                meta_data_params = (street, city, state)
+                cursor.execute(meta_data_query, meta_data_params)
                 connection.commit()
                 cursor.close()
                 connection.close()
