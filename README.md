@@ -63,10 +63,6 @@ CREATE DATABASE IF NOT EXISTS walkdatadb;
 USE walkdatadb;
 
 CREATE TABLE WalkabilityIndex (
-    STATEFP CHAR(2),
-    COUNTYFP CHAR(3),
-    TRACTCE CHAR(6),
-    BLKGRPCE CHAR(1),
     intersection_density INT,
     transit_access INT,
     job_housing_mix INT,
@@ -111,7 +107,7 @@ GRANT ALL PRIVILEGES ON walkdatadb.* TO 'walkdbuser'@'localhost';
 FLUSH PRIVILEGES;
 
 # import the .csv for walkability dataset.
--- make sure you're in the same directory as the WalkabilityIndex.csv data set, here are some steps from the lab
+-- make sure you're in the same directory as the walkability_index.csv data set, here are some steps from the lab
 
 You may need to login into mysql as a root user and issue:
 SET GLOBAL local_infile = true;
@@ -130,17 +126,13 @@ terminated by ',' lines terminated by '\n';
 
 ex)
 
-LOAD DATA LOCAL INFILE '/full/path/WalkabilityIndex.csv'
+LOAD DATA LOCAL INFILE '/full/path/walkability_index.csv'
 INTO TABLE WalkabilityIndex
 FIELDS TERMINATED BY ',' 
 ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS
 (
-  STATEFP,
-  COUNTYFP,
-  TRACTCE,
-  BLKGRPCE,
   intersection_density,
   transit_access,
   job_housing_mix,
